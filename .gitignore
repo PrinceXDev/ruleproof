@@ -1,0 +1,12 @@
+# Go build artifacts
+*.exe
+*.exe~
+*.test
+*.out
+
+# Local SQLite database (runtime state, not source)
+ruleproof.db
+ruleproof.db-shm
+ruleproof.db-wal
+
+# Node/Next.js (web/ already has its own .gitignore for node_modules, .next, etc.)
