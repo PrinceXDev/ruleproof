@@ -9,7 +9,7 @@ export class ApiRequestError extends Error {
   }
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
   const res = await fetch(path, {
     ...init,
     headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
@@ -25,7 +25,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     throw new ApiRequestError(res.status, message);
   }
   return res.json() as Promise<T>;
-}
+};
 
 export const api = {
   createPlan: (text: string, signal?: AbortSignal) =>

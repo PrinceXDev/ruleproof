@@ -139,6 +139,28 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* Printed evidence (report page) goes on white paper: swap the dark palette
+   for a light one with the same token names. */
+@media print {
+  :root {
+    --color-canvas: #ffffff;
+    --color-panel: #ffffff;
+    --color-panel-elevated: #f4f5f1;
+    --color-border: #d4d8d0;
+    --color-ink: #10120f;
+    --color-ink-muted: #3f4740;
+    --color-ink-faint: #6a736b;
+    --color-brand: #4d6b00;
+    --color-pass: #157a47;
+    --color-fail: #b4231a;
+    --color-attn: #8a5a00;
+  }
+  li,
+  pre {
+    break-inside: avoid;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

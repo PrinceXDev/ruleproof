@@ -6,16 +6,16 @@ const TOKEN_SOURCE =
 // classify is only ever called for non-key tokens (the caller routes key
 // tokens to "text-brand" itself), so a quoted token here is always a string
 // value, never a key.
-function classify(token: string): string {
+const classify = (token: string): string => {
   if (/^".*"$/.test(token)) return "text-pass";
   if (token === "true" || token === "false") return "text-attn";
   if (token === "null") return "text-ink-faint";
   if (/^-?\d/.test(token)) return "text-fail";
   return "text-pass";
-}
+};
 
 /** Minimal, dependency-free JSON syntax highlighting for evidence bodies. */
-export default function JsonView({ value }: { value: string }) {
+const JsonView = ({ value }: { value: string }) => {
   let pretty = value;
   try {
     pretty = JSON.stringify(JSON.parse(value), null, 2);
@@ -41,4 +41,6 @@ export default function JsonView({ value }: { value: string }) {
   nodes.push(pretty.slice(lastIndex));
 
   return <pre className="overflow-x-auto whitespace-pre-wrap break-all font-mono-tnum text-[12.5px] leading-relaxed text-ink-muted">{nodes}</pre>;
-}
+};
+
+export default JsonView;

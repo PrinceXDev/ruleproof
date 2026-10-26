@@ -4,16 +4,11 @@ import clsx from "clsx";
 import { Check } from "lucide-react";
 import { useRef } from "react";
 import { gsap, useGSAP } from "@/lib/gsap";
+import { STUDIO_STEPS } from "@/constants/navigation";
 
 export type StepStatus = "done" | "active" | "pending";
 
-const steps: { n: string; label: string }[] = [
-  { n: "01", label: "Explain" },
-  { n: "02", label: "Review" },
-  { n: "03", label: "Verify" },
-];
-
-export default function Stepper({
+const Stepper = ({
   current,
   viewing,
   onNavigate,
@@ -21,7 +16,7 @@ export default function Stepper({
   current: 0 | 1 | 2;
   viewing?: 0 | 1 | 2;
   onNavigate?: (i: 0 | 1 | 2) => void;
-}) {
+}) => {
   const active = viewing ?? current;
   const badgeRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const prevCurrent = useRef(current);
@@ -47,7 +42,7 @@ export default function Stepper({
 
   return (
     <ol className="flex items-center gap-2" aria-label="Workflow progress">
-      {steps.map((step, i) => {
+      {STUDIO_STEPS.map((step, i) => {
         const status: StepStatus = i < current ? "done" : i === current ? "active" : "pending";
         const clickable = Boolean(onNavigate) && i <= current && i !== active;
         return (
@@ -76,10 +71,12 @@ export default function Stepper({
               )}
               <span>{step.label}</span>
             </button>
-            {i < steps.length - 1 && <span className="h-px w-5 bg-border" aria-hidden />}
+            {i < STUDIO_STEPS.length - 1 && <span className="h-px w-5 bg-border" aria-hidden />}
           </li>
         );
       })}
     </ol>
   );
-}
+};
+
+export default Stepper;

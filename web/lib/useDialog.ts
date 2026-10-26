@@ -9,7 +9,7 @@ const FOCUSABLE = 'a[href], button:not([disabled]), textarea, input, select, [ta
  * while open, closes on Escape, and restores focus to whatever triggered
  * the dialog once it closes.
  */
-export function useDialog<T extends HTMLElement>(open: boolean, onClose: () => void) {
+export const useDialog = <T extends HTMLElement>(open: boolean, onClose: () => void) => {
   const ref = useRef<T>(null);
   const triggerRef = useRef<Element | null>(null);
 
@@ -22,7 +22,7 @@ export function useDialog<T extends HTMLElement>(open: boolean, onClose: () => v
     const first = focusables()[0];
     first?.focus();
 
-    function onKeyDown(e: KeyboardEvent) {
+    const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.stopPropagation();
         onClose();
@@ -40,7 +40,7 @@ export function useDialog<T extends HTMLElement>(open: boolean, onClose: () => v
         e.preventDefault();
         firstEl.focus();
       }
-    }
+    };
 
     document.addEventListener("keydown", onKeyDown, true);
     return () => {
@@ -53,4 +53,4 @@ export function useDialog<T extends HTMLElement>(open: boolean, onClose: () => v
   }, [open]);
 
   return ref;
-}
+};

@@ -8,13 +8,13 @@ import Badge from "./Badge";
 
 type State = { planId: string; report: CoverageReport | null; error: string | null };
 
-export default function CoveragePanel({
+const CoveragePanel = ({
   planId,
   onAddSentence,
 }: {
   planId: string;
   onAddSentence: (sentence: string) => void;
-}) {
+}) => {
   const [state, setState] = useState<State>({ planId: "", report: null, error: null });
 
   useEffect(() => {
@@ -114,4 +114,6 @@ export default function CoveragePanel({
       </ul>
     </section>
   );
-}
+};
+
+export default CoveragePanel;
