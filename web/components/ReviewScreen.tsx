@@ -5,6 +5,7 @@ import { ChevronDown, Info, Loader2 } from "lucide-react";
 import clsx from "clsx";
 import type { Plan, PlanCase } from "@/lib/types";
 import Badge from "./Badge";
+import CoveragePanel from "./CoveragePanel";
 import RevisionDiff, { useRevisionDiff } from "./RevisionDiff";
 import {
   Select,
@@ -19,7 +20,7 @@ const ROLE_LABEL: Record<string, string> = {
   viewer: "Viewer",
   editor: "Editor",
 };
-const ACTION_LABEL: Record<string, string> = { read: "Read", update: "Update" };
+const ACTION_LABEL: Record<string, string> = { read: "Read", update: "Update", export: "Export" };
 const SCOPE_LABEL: Record<string, string> = {
   own: "Own tenant",
   other: "Other tenant",
@@ -41,11 +42,13 @@ export default function ReviewScreen({
   approving,
   editingPending,
   lineage,
+  onAddSentence,
 }: {
   plan: Plan;
   lineage?: Plan[];
   revisionLabel: string;
   onEdit: (caseId: string, want: number) => void;
+  onAddSentence: (sentence: string) => void;
   onApprove: () => void;
   approving: boolean;
   editingPending: boolean;
@@ -106,6 +109,10 @@ export default function ReviewScreen({
           />
         </div>
       )}
+
+      <div className="mt-4">
+        <CoveragePanel planId={plan.id} onAddSentence={onAddSentence} />
+      </div>
 
       <div className="mt-6 overflow-hidden rounded-lg border border-border">
         <table className="hidden w-full text-sm md:table">
@@ -268,7 +275,7 @@ function ReviewRow({
             <div className="flex flex-wrap items-start gap-2 font-mono-tnum text-xs text-ink-muted">
               <Info size={13} className="mt-0.5 text-ink-faint" />
               <span>
-                {c.method} /assets/{c.assetId} · identity: demo-{c.role}-a ·
+                {c.method} /assets/{c.assetId}{c.action === "export" && "/export"} · identity: demo-{c.role}-a ·
                 asset tenant: {c.assetOwner} · assertion: response status =={" "}
                 {c.expectedStatus}
               </span>

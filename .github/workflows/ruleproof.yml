@@ -22,19 +22,25 @@ jobs:
       - name: Enforce approved access rules
         run: go run ./cmd/ruleproof-ci -bundle examples/tenant-isolation.bundle.json -fixture fixed -junit ruleproof-junit.xml
 
-      # Proves the gate has teeth: the same plan must fail on the seeded defect.
+      # The revision that closes the export coverage gap must hold too.
+      - name: Enforce approved access rules (with export)
+        run: go run ./cmd/ruleproof-ci -bundle examples/tenant-isolation-export.bundle.json -fixture fixed -junit ruleproof-export-junit.xml
+
+      # Proves the gate has teeth: the same plans must fail on the seeded defect.
       - name: Seeded defect is caught
         # Unset GitHub mode so expected failures don't become red annotations.
         run: |
-          if env -u GITHUB_ACTIONS -u GITHUB_STEP_SUMMARY go run ./cmd/ruleproof-ci -bundle examples/tenant-isolation.bundle.json -fixture broken > broken.txt; then
-            echo "::error::RuleProof did not catch the seeded cross-tenant read defect"
-            exit 1
-          fi
-          cat broken.txt
+          for bundle in tenant-isolation tenant-isolation-export; do
+            if env -u GITHUB_ACTIONS -u GITHUB_STEP_SUMMARY go run ./cmd/ruleproof-ci -bundle examples/$bundle.bundle.json -fixture broken > broken.txt; then
+              echo "::error::RuleProof did not catch the seeded cross-tenant defect with $bundle"
+              exit 1
+            fi
+            cat broken.txt
+          done
 
       - name: Upload JUnit report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ruleproof-junit
-          path: ruleproof-junit.xml
+          path: ruleproof-*junit.xml

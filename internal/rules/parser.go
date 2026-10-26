@@ -26,7 +26,7 @@ type Case struct {
 	ID         string `json:"id"`
 	Actor      string `json:"actor"`
 	Role       string `json:"role"`   // "viewer" | "editor"
-	Action     string `json:"action"` // "read" | "update"
+	Action     string `json:"action"` // "read" | "update" | "export"
 	Method     string `json:"method"`
 	Scope      string `json:"scope"` // "own" | "other" tenant
 	AssetID    string `json:"assetId"`
@@ -154,6 +154,26 @@ func Parse(text string) Plan {
 		assumptions = append(assumptions, "Assumed access to another tenant's assets is always denied (rule did not mention tenants explicitly).")
 	}
 
+	// Export cases exist only when the rule talks about exporting, so rules
+	// that never mention it keep their exact 8-case plan (and approval hash).
+	_, mentionsExport := findSnippetAny(text, exportWords...)
+	exportOwn := map[string]bool{}
+	if mentionsExport {
+		var implicit []string
+		for _, role := range []string{"editor", "viewer"} {
+			allowed, explicit := exportOwnScope(sentences, role)
+			exportOwn[role] = allowed
+			if !explicit {
+				implicit = append(implicit, role+"s")
+			}
+		}
+		if len(implicit) > 0 {
+			assumptions = append(assumptions, "Assumed "+strings.Join(implicit, " and ")+" can export assets in their own tenant (rule only restricted cross-tenant export).")
+		}
+		snippet, _ := findSnippetAny(text, exportWords...)
+		concepts = append(concepts, Concept{Label: "Export", Value: "cross-tenant denied", Snippet: snippet})
+	}
+
 	plan := Plan{RuleText: text, Assumptions: assumptions, Concepts: concepts}
 
 	for _, id := range fixedIdentities {
@@ -181,10 +201,64 @@ func Parse(text string) Plan {
 				updateWant = 403
 			}
 			plan.Cases = append(plan.Cases, buildCase(id, asset.ID, asset.Owner, scope, "update", "PUT", updateWant))
+
+			if mentionsExport {
+				exportWant := 200
+				if crossTenant || !exportOwn[id.Role] {
+					exportWant = 403
+				}
+				plan.Cases = append(plan.Cases, buildCase(id, asset.ID, asset.Owner, scope, "export", "GET", exportWant))
+			}
 		}
 	}
 
 	return plan
+}
+
+var exportWords = []string{"export", "download"}
+
+// exportOwnScope reports whether role may export its own tenant's assets, and
+// whether the rule said so explicitly. Sentences about another tenant only
+// restrict cross-tenant export, which is always denied anyway.
+func exportOwnScope(sentences []string, role string) (allowed, explicit bool) {
+	for _, s := range sentences {
+		if !containsAny(s, exportWords...) || containsAny(s, "another", "other tenant", "other tenants") {
+			continue
+		}
+		if !containsAny(s, role, "everyone", "anyone", "nobody", "no one", "both roles") {
+			continue
+		}
+		if containsAny(s, "cannot", "can't", "may not", "nobody", "no one", "not export", "not download") {
+			return false, true
+		}
+		return true, true
+	}
+	return true, false
+}
+
+var actionWords = map[string][]string{
+	"read":   {"read", "view", "access"},
+	"update": {"update", "edit", "write"},
+	"export": exportWords,
+}
+
+// ActionSnippet returns the sentence of text that grounds action, if any, and
+// whether action is in the parser's vocabulary at all.
+func ActionSnippet(text, action string) (snippet string, supported bool) {
+	words, ok := actionWords[action]
+	if !ok {
+		return "", false
+	}
+	snippet, _ = findSnippetAny(text, words...)
+	return snippet, true
+}
+
+// CasePath is the fixture request path a case exercises.
+func CasePath(c Case) string {
+	if c.Action == "export" {
+		return "/assets/" + c.AssetID + "/export"
+	}
+	return "/assets/" + c.AssetID
 }
 
 func buildCase(id Identity, assetID, owner, scope, action, method string, want int) Case {

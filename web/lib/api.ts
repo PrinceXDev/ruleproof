@@ -1,4 +1,4 @@
-import type { Fixture, History, Plan, PlanDiff, Run } from "./types";
+import type { CoverageReport, Fixture, History, Plan, PlanDiff, Run } from "./types";
 
 export class ApiRequestError extends Error {
   status: number;
@@ -49,6 +49,8 @@ export const api = {
   // base defaults to the plan's parent revision on the server.
   diff: (id: string, base?: string, signal?: AbortSignal) =>
     request<PlanDiff>(`/api/plans/${id}/diff${base ? `?base=${encodeURIComponent(base)}` : ""}`, { signal }),
+
+  coverage: (id: string, signal?: AbortSignal) => request<CoverageReport>(`/api/plans/${id}/coverage`, { signal }),
 
   exportBundle: (id: string, signal?: AbortSignal) =>
     request<Record<string, unknown>>(`/api/plans/${id}/export`, { signal }),

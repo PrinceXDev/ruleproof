@@ -7,7 +7,7 @@ import { cn } from "@/lib/cn";
 import type { CaseChange, ExpectedLabel, PlanDiff } from "@/lib/types";
 
 const ROLE_LABEL: Record<string, string> = { viewer: "Viewer", editor: "Editor" };
-const ACTION_LABEL: Record<string, string> = { read: "Read", update: "Update" };
+const ACTION_LABEL: Record<string, string> = { read: "Read", update: "Update", export: "Export" };
 const SCOPE_LABEL: Record<string, string> = { own: "own tenant", other: "other tenant" };
 const OUTCOME: Record<ExpectedLabel, string> = {
   allow: "Allow",
@@ -209,7 +209,7 @@ function CaseRow({ c }: { c: CaseChange }) {
           {ROLE_LABEL[c.role]} · {ACTION_LABEL[c.action]}
         </span>
         <span className="ml-2 text-xs text-ink-faint">
-          {SCOPE_LABEL[c.scope]} · {c.method} /assets/{c.assetId}
+          {SCOPE_LABEL[c.scope]} · {c.method} /assets/{c.assetId}{c.action === "export" && "/export"}
         </span>
       </span>
       <span className="flex items-center gap-2 font-mono-tnum text-xs">

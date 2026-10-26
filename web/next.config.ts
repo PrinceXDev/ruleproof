@@ -11,7 +11,7 @@ const nextConfig: NextConfig = isDev
         return [
           {
             source: "/api/:path*",
-            destination: "http://localhost:8080/api/:path*",
+            destination: `${process.env.RULEPROOF_API_URL ?? "http://localhost:8080"}/api/:path*`,
           },
         ];
       },
