@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"ruleproof/internal/check"
+	"ruleproof/internal/diff"
 	"ruleproof/internal/rules"
 	"ruleproof/internal/store"
 )
@@ -41,6 +42,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /api/plans/{id}", s.handleGetPlan)
 	mux.HandleFunc("GET /api/plans/{id}/history", s.handleHistory)
 	mux.HandleFunc("GET /api/plans/{id}/export", s.handleExport)
+	mux.HandleFunc("GET /api/plans/{id}/diff", s.handleDiff)
 	mux.HandleFunc("POST /api/plans/{id}/revise", s.handleRevise)
 	mux.HandleFunc("PATCH /api/plans/{id}/cases", s.handleEditCases)
 	mux.HandleFunc("POST /api/plans/{id}/acknowledge", s.handleAcknowledge)
@@ -246,6 +248,36 @@ func (s *Server) handleExport(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Disposition", `attachment; filename="ruleproof-`+p.ID+`.json"`)
 	writeJSON(w, http.StatusOK, bundle)
+}
+
+// handleDiff compares a revision (the path id) against ?base=, defaulting to
+// its parent. Both must belong to the same lineage.
+func (s *Server) handleDiff(w http.ResponseWriter, r *http.Request) {
+	head, err := s.Store.GetPlan(r.Context(), r.PathValue("id"))
+	if !writeStoreErr(w, err) {
+		return
+	}
+	baseID := r.URL.Query().Get("base")
+	if baseID == "" {
+		baseID = head.ParentPlanID
+	}
+	if baseID == "" {
+		writeError(w, http.StatusBadRequest, "plan has no parent revision; pass ?base=<plan id>")
+		return
+	}
+	base, err := s.Store.GetPlan(r.Context(), baseID)
+	if !writeStoreErr(w, err) {
+		return
+	}
+	if base.RootPlanID != head.RootPlanID {
+		writeError(w, http.StatusBadRequest, "plans belong to different rules and cannot be compared")
+		return
+	}
+	writeJSON(w, http.StatusOK, diff.Compare(toDiffSide(base), toDiffSide(head)))
+}
+
+func toDiffSide(p *store.Plan) diff.Side {
+	return diff.Side{ID: p.ID, RuleText: p.RuleText, Cases: p.Cases, Assumptions: p.Assumptions, Hash: p.Hash, Approved: p.Approved}
 }
 
 // --- runs ---

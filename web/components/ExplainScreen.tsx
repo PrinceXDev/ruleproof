@@ -1,12 +1,35 @@
 "use client";
 
-import { AlertTriangle, Eye, Mic, Pencil, Sparkles } from "lucide-react";
+import { AlertTriangle, Eye, Loader2, Mic, Pencil, Sparkles } from "lucide-react";
 import { useRef } from "react";
 import type { Concept } from "@/lib/types";
 import { useGSAP, gsap } from "@/lib/gsap";
+import { buttonVariants } from "./ui/button";
 
-const SAMPLE_RULE =
-  "Viewers can read assets in their own tenant. Editors can also update them. Neither role can access another tenant's assets.";
+const EXAMPLES = [
+  {
+    label: "Tenant isolation",
+    hint: "The sample · 0 assumptions",
+    text: "Viewers can read assets in their own tenant. Editors can also update them. Neither role can access another tenant's assets.",
+  },
+  {
+    label: "Editors only",
+    hint: "Needs a clarification",
+    text: "Only editors can read or update assets.",
+  },
+  {
+    label: "Read-only viewers",
+    hint: "Implied denials",
+    text: "Viewers have read-only access to their own tenant's assets. Editors can read and update assets in their own tenant.",
+  },
+];
+
+function wordCount(t: string) {
+  return t.trim() ? t.trim().split(/\s+/).length : 0;
+}
+function sentenceCount(t: string) {
+  return t.split(/[.!?]+/).filter((s) => s.trim()).length;
+}
 
 export default function ExplainScreen({
   text,
@@ -47,57 +70,84 @@ export default function ExplainScreen({
   );
 
   return (
-    <div ref={rootRef} className="mx-auto grid max-w-5xl grid-cols-1 gap-8 px-6 py-10 lg:grid-cols-[1fr_280px]">
+    <div ref={rootRef} className="mx-auto grid max-w-6xl grid-cols-1 gap-8 px-4 py-8 sm:px-6 sm:py-12 lg:grid-cols-[1fr_300px]">
       <div data-explain-reveal>
-        <h1 className="text-2xl font-semibold tracking-tight text-ink">What should your API allow?</h1>
-        <p className="mt-1.5 text-sm text-ink-muted">
-          Describe who can do what. Review the checks before anything runs.
+        <p className="font-mono text-[11px] uppercase tracking-[.2em] text-brand">Step 1 · Explain</p>
+        <h1 className="mt-3 text-3xl font-semibold tracking-[-0.03em] text-ink sm:text-4xl">
+          What should your API allow?
+        </h1>
+        <p className="mt-2 max-w-xl text-[15px] text-ink-muted">
+          Describe who can do what, in plain language. Nothing runs until you review and approve the checks.
         </p>
 
-        <div id="rule-summary-flip" className="mt-6">
-          <label htmlFor="rule-input" className="mb-2 block text-xs font-medium text-ink-muted">
-            Access rule
-          </label>
-          <textarea
-            id="rule-input"
-            value={text}
-            onChange={(e) => onTextChange(e.target.value)}
-            placeholder="e.g. Editors can update assets in their own tenant, but viewers cannot..."
-            rows={6}
-            className="w-full resize-y rounded-lg border border-border bg-panel px-4 py-3 text-sm leading-relaxed text-ink placeholder:text-ink-faint focus:border-brand/50"
-          />
-          <div className="mt-2 flex items-center gap-1.5 text-xs text-ink-faint">
-            <Mic size={13} />
-            Type or dictate with Wispr.
+        <div id="rule-summary-flip" className="mt-8">
+          <div className="overflow-hidden rounded-xl border border-border bg-panel shadow-[0_20px_60px_-30px_rgba(0,0,0,.8)] transition-colors focus-within:border-brand/50">
+            <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
+              <label htmlFor="rule-input" className="text-xs font-medium text-ink-muted">
+                Access rule
+              </label>
+              <span className="font-mono-tnum text-[11px] text-ink-faint">
+                {wordCount(text)} words · {sentenceCount(text)} sentences
+              </span>
+            </div>
+            <textarea
+              id="rule-input"
+              value={text}
+              onChange={(e) => onTextChange(e.target.value)}
+              onKeyDown={(e) => {
+                if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && text.trim() && !loading) onGenerate();
+              }}
+              placeholder="e.g. Editors can update assets in their own tenant, but viewers cannot..."
+              rows={5}
+              className="block w-full resize-y bg-transparent px-4 py-4 text-base leading-relaxed text-ink outline-none placeholder:text-ink-faint focus-visible:outline-none"
+            />
+            <div className="flex flex-wrap items-center gap-2 border-t border-border bg-canvas/40 px-3 py-2.5">
+              <span className="flex items-center gap-1.5 px-1 text-xs text-ink-faint">
+                <Mic size={13} className="text-brand" />
+                Dictate with Wispr Flow, or type
+              </span>
+              <span className="ml-auto hidden items-center gap-1 text-[11px] text-ink-faint sm:flex">
+                <kbd className="rounded border border-border bg-panel-elevated px-1.5 py-0.5 font-mono">Ctrl</kbd>
+                <kbd className="rounded border border-border bg-panel-elevated px-1.5 py-0.5 font-mono">Enter</kbd>
+              </span>
+              <button
+                type="button"
+                onClick={onGenerate}
+                disabled={loading || !text.trim()}
+                className={buttonVariants({ size: "sm" })}
+              >
+                {loading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+                {loading ? "Generating…" : hasPlan ? "Update checks" : "Generate checks"}
+              </button>
+            </div>
           </div>
 
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={onGenerate}
-              disabled={loading || !text.trim()}
-              className="flex items-center gap-1.5 rounded-md bg-brand px-4 py-2 text-sm font-medium text-brand-ink transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <Sparkles size={15} />
-              {loading ? "Generating…" : hasPlan ? "Update checks" : "Generate checks"}
-            </button>
-            <button
-              type="button"
-              onClick={() => onTextChange(SAMPLE_RULE)}
-              className="rounded-md border border-border px-3.5 py-2 text-sm text-ink-muted transition-colors hover:border-ink-faint hover:text-ink"
-            >
-              Load example
-            </button>
-            <button
-              type="button"
-              onClick={() => onTextChange("")}
-              className="rounded-md border border-border px-3.5 py-2 text-sm text-ink-muted transition-colors hover:border-ink-faint hover:text-ink"
-            >
-              Clear
-            </button>
+          <div className="mt-5">
+            <p className="mb-2 text-xs text-ink-faint">Try an example</p>
+            <div className="flex flex-wrap gap-2">
+              {EXAMPLES.map((ex) => (
+                <button
+                  key={ex.label}
+                  type="button"
+                  onClick={() => onTextChange(ex.text)}
+                  aria-pressed={text === ex.text}
+                  className="group rounded-lg border border-border bg-panel px-3 py-2 text-left transition-colors hover:border-ink-faint aria-pressed:border-brand/50 aria-pressed:bg-brand/[.06]"
+                >
+                  <span className="block text-[13px] text-ink">{ex.label}</span>
+                  <span className="block text-[11px] text-ink-faint">{ex.hint}</span>
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => onTextChange("")}
+                className="rounded-lg px-3 py-2 text-[13px] text-ink-faint transition-colors hover:text-ink"
+              >
+                Clear
+              </button>
+            </div>
           </div>
 
-          <p className="mt-4 text-xs leading-relaxed text-ink-faint">
+          <p className="mt-6 text-xs leading-relaxed text-ink-faint">
             Supported scope: viewer and editor roles, read and update actions, and own-vs-other-tenant asset
             ownership. Anything outside that vocabulary is surfaced as a clarification rather than guessed.
           </p>
@@ -161,7 +211,7 @@ export default function ExplainScreen({
         ) : null}
       </div>
 
-      <aside data-explain-reveal className="h-fit rounded-lg border border-border bg-panel p-4">
+      <aside data-explain-reveal className="h-fit rounded-xl border border-border bg-panel p-5 lg:mt-[104px]">
         <h2 className="mb-3 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-ink-faint">
           <Pencil size={12} />
           Fixture reference

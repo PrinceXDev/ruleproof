@@ -1,0 +1,40 @@
+name: RuleProof
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  enforce-access-rules:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Go tests
+        run: go test ./...
+
+      # The approved plan must hold against the corrected API. Any mismatch
+      # fails this step and shows up as annotations plus a job summary.
+      - name: Enforce approved access rules
+        run: go run ./cmd/ruleproof-ci -bundle examples/tenant-isolation.bundle.json -fixture fixed -junit ruleproof-junit.xml
+
+      # Proves the gate has teeth: the same plan must fail on the seeded defect.
+      - name: Seeded defect is caught
+        # Unset GitHub mode so expected failures don't become red annotations.
+        run: |
+          if env -u GITHUB_ACTIONS -u GITHUB_STEP_SUMMARY go run ./cmd/ruleproof-ci -bundle examples/tenant-isolation.bundle.json -fixture broken > broken.txt; then
+            echo "::error::RuleProof did not catch the seeded cross-tenant read defect"
+            exit 1
+          fi
+          cat broken.txt
+
+      - name: Upload JUnit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ruleproof-junit
+          path: ruleproof-junit.xml

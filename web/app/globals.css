@@ -24,6 +24,54 @@
   --radius-lg: 12px;
 
   --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --spacing-13: 3.25rem;
+
+  --animate-select-in: select-in 140ms ease-out;
+  --animate-select-out: select-out 100ms ease-in;
+  --animate-accordion-down: accordion-down 260ms var(--ease-standard);
+  --animate-accordion-up: accordion-up 200ms var(--ease-standard);
+  --animate-marquee: marquee 40s linear infinite;
+  --animate-pulse-ring: pulse-ring 2.4s ease-out infinite;
+  --animate-scan: scan 6s ease-in-out infinite;
+
+  @keyframes select-in {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes select-out {
+    from { opacity: 1; }
+    to { opacity: 0; }
+  }
+  @keyframes accordion-down {
+    from { height: 0; }
+    to { height: var(--radix-accordion-content-height); }
+  }
+  @keyframes accordion-up {
+    from { height: var(--radix-accordion-content-height); }
+    to { height: 0; }
+  }
+  @keyframes marquee {
+    to { transform: translateX(-50%); }
+  }
+  @keyframes pulse-ring {
+    0% { box-shadow: 0 0 0 0 rgb(213 248 121 / 0.55); }
+    70%, 100% { box-shadow: 0 0 0 10px rgb(213 248 121 / 0); }
+  }
+  @keyframes scan {
+    0%, 100% { transform: translateY(-10%); opacity: 0; }
+    15%, 85% { opacity: 1; }
+    50% { transform: translateY(1100%); }
+  }
+}
+
+/* Lenis owns scrolling when active; native smooth scroll would fight it. */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
 }
 
 html,

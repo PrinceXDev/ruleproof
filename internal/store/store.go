@@ -9,9 +9,7 @@ package store
 
 import (
 	"context"
-	"crypto/sha256"
 	"database/sql"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -223,13 +221,6 @@ func decodeCases(raw string) ([]rules.Case, error) {
 	return cases, nil
 }
 
-func hashCases(cases []rules.Case) string {
-	h := sha256.New()
-	for _, c := range cases {
-		fmt.Fprintf(h, "%s|%s|%d|", c.ID, c.Method, c.Want)
-	}
-	return hex.EncodeToString(h.Sum(nil))[:16]
-}
 
 // CreateRootPlan interprets freshly dictated or typed text into a brand new
 // plan lineage.
@@ -242,7 +233,7 @@ func (s *Store) CreateRootPlan(ctx context.Context, text string) (*Plan, error) 
 	p := &Plan{
 		ID: id, RootPlanID: id, Kind: KindRoot,
 		RuleText: parsed.RuleText, Cases: parsed.Cases, Assumptions: parsed.Assumptions,
-		Hash: hashCases(parsed.Cases), CreatedAt: time.Now().UTC(),
+		Hash: rules.Hash(parsed.Cases), CreatedAt: time.Now().UTC(),
 	}
 	if err := s.insertPlan(ctx, p); err != nil {
 		return nil, err
@@ -266,7 +257,7 @@ func (s *Store) RevisePlan(ctx context.Context, parentID, text string) (*Plan, e
 	p := &Plan{
 		ID: id, RootPlanID: parent.RootPlanID, ParentPlanID: parent.ID, Kind: KindRevision,
 		RuleText: parsed.RuleText, Cases: parsed.Cases, Assumptions: parsed.Assumptions,
-		Hash: hashCases(parsed.Cases), CreatedAt: time.Now().UTC(),
+		Hash: rules.Hash(parsed.Cases), CreatedAt: time.Now().UTC(),
 	}
 	if err := s.insertPlan(ctx, p); err != nil {
 		return nil, err
@@ -311,7 +302,7 @@ func (s *Store) EditCases(ctx context.Context, parentID string, overrides map[st
 	p := &Plan{
 		ID: id, RootPlanID: parent.RootPlanID, ParentPlanID: parent.ID, Kind: KindEdit,
 		RuleText: parent.RuleText, Cases: cases, Assumptions: parent.Assumptions,
-		Hash: hashCases(cases), AssumptionsAcknowledged: parent.AssumptionsAcknowledged, CreatedAt: time.Now().UTC(),
+		Hash: rules.Hash(cases), AssumptionsAcknowledged: parent.AssumptionsAcknowledged, CreatedAt: time.Now().UTC(),
 	}
 	if err := s.insertPlan(ctx, p); err != nil {
 		return nil, err

@@ -1,4 +1,4 @@
-import type { Fixture, History, Plan, Run } from "./types";
+import type { Fixture, History, Plan, PlanDiff, Run } from "./types";
 
 export class ApiRequestError extends Error {
   status: number;
@@ -45,6 +45,10 @@ export const api = {
   approve: (id: string, signal?: AbortSignal) => request<Plan>(`/api/plans/${id}/approve`, { method: "POST", signal }),
 
   history: (id: string, signal?: AbortSignal) => request<History>(`/api/plans/${id}/history`, { signal }),
+
+  // base defaults to the plan's parent revision on the server.
+  diff: (id: string, base?: string, signal?: AbortSignal) =>
+    request<PlanDiff>(`/api/plans/${id}/diff${base ? `?base=${encodeURIComponent(base)}` : ""}`, { signal }),
 
   exportBundle: (id: string, signal?: AbortSignal) =>
     request<Record<string, unknown>>(`/api/plans/${id}/export`, { signal }),

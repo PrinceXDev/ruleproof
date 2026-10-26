@@ -1,9 +1,12 @@
 "use client";
 
-import { CheckCircle2, Clock, GitBranch, XCircle } from "lucide-react";
+import { useState } from "react";
+import { CheckCircle2, Clock, GitBranch, GitCompareArrows, XCircle } from "lucide-react";
 import clsx from "clsx";
 import type { History, Run } from "@/lib/types";
 import Badge from "./Badge";
+import RevisionDiff, { useRevisionDiff } from "./RevisionDiff";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 
 const KIND_LABEL: Record<string, string> = { root: "Original", revision: "Revised wording", edit: "Edited expectation" };
 
@@ -16,6 +19,15 @@ export default function HistoryPanel({
   onOpenRun: (run: Run) => void;
   loading: boolean;
 }) {
+  const lineage = history?.lineage ?? [];
+  // null = follow the default pair (the two most recent revisions).
+  const [pair, setPair] = useState<{ base: string; head: string } | null>(null);
+  const valid = (id?: string) => Boolean(id && lineage.some((p) => p.id === id));
+  const head = pair && valid(pair.head) ? pair.head : lineage.at(-1)?.id;
+  const base = pair && valid(pair.base) ? pair.base : lineage.at(-2)?.id;
+  const diff = useRevisionDiff(lineage.length > 1 && head ? head : null, base);
+  const nameOf = (id?: string) => `Revision ${lineage.findIndex((p) => p.id === id) + 1}`;
+
   if (loading) {
     return <div className="px-6 py-10 text-sm text-ink-muted">Loading history…</div>;
   }
@@ -44,10 +56,57 @@ export default function HistoryPanel({
               <span className="font-mono-tnum text-ink">Revision {i + 1}</span>
               <span className="ml-2 text-ink-faint">{KIND_LABEL[p.kind]}</span>
             </div>
-            <Badge tone={p.approved ? "pass" : "neutral"}>{p.approved ? "Approved" : "Unapproved"}</Badge>
+            <div className="flex items-center gap-2">
+              {i > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setPair({ base: lineage[i - 1].id, head: p.id })}
+                  className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-ink-muted transition-colors hover:bg-panel-elevated hover:text-ink"
+                >
+                  <GitCompareArrows size={13} /> Compare with {i}
+                </button>
+              )}
+              <Badge tone={p.approved ? "pass" : "neutral"}>{p.approved ? "Approved" : "Unapproved"}</Badge>
+            </div>
           </li>
         ))}
       </ol>
+
+      {lineage.length > 1 && base && head && (
+        <>
+          <div className="mb-2 mt-7 flex flex-wrap items-center gap-2">
+            <h2 className="mr-auto text-xs font-medium uppercase tracking-wider text-ink-faint">Compare revisions</h2>
+            <RevisionPicker
+              label="Base revision"
+              value={base}
+              options={lineage.map((p) => p.id)}
+              nameOf={nameOf}
+              onChange={(v) => setPair({ base: v, head })}
+            />
+            <span className="text-xs text-ink-faint">→</span>
+            <RevisionPicker
+              label="Compared revision"
+              value={head}
+              options={lineage.map((p) => p.id)}
+              nameOf={nameOf}
+              onChange={(v) => setPair({ base, head: v })}
+            />
+          </div>
+          {base === head ? (
+            <p className="rounded-xl border border-border bg-panel px-4 py-3 text-sm text-ink-muted">
+              Pick two different revisions to compare.
+            </p>
+          ) : (
+            <RevisionDiff
+              diff={diff.diff}
+              loading={diff.loading}
+              error={diff.error}
+              baseLabel={nameOf(base)}
+              headLabel={nameOf(head)}
+            />
+          )}
+        </>
+      )}
 
       <h2 className="mb-2 mt-7 text-xs font-medium uppercase tracking-wider text-ink-faint">Runs</h2>
       {history.runs.length === 0 ? (
@@ -82,5 +141,34 @@ export default function HistoryPanel({
         </ul>
       )}
     </div>
+  );
+}
+
+function RevisionPicker({
+  label,
+  value,
+  options,
+  nameOf,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: string[];
+  nameOf: (id: string) => string;
+  onChange: (id: string) => void;
+}) {
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger aria-label={label} className="min-h-9 min-w-32 py-1.5 text-xs">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((id) => (
+          <SelectItem key={id} value={id}>
+            {nameOf(id)}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
