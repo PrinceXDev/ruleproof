@@ -30,16 +30,32 @@ var owners = map[string]string{
 	"b1": "B",
 }
 
+// Mode selects how the fixture enforces tenant isolation.
+type Mode int
+
+const (
+	// Fixed checks tenant ownership on every request.
+	Fixed Mode = iota
+	// Broken skips the cross-tenant ownership check on GETs (read and export),
+	// the seeded defect this demo is built to expose.
+	Broken
+	// Partial passes every approved check but carries two real-world slips:
+	// HEAD reuses the GET handler without the tenant check, and a client-sent
+	// X-Tenant-ID header overrides the caller's tenant.
+	Partial
+)
+
+// Modes maps fixture names, as used by the API and CI, to their mode.
+var Modes = map[string]Mode{"broken": Broken, "partial": Partial, "fixed": Fixed}
+
 // Handler serves GET (read) and PUT (update) on /assets/{id}, and GET
-// (export) on /assets/{id}/export.
-// When broken is true, the cross-tenant ownership check on GETs (read and
-// export) is skipped — the seeded defect this demo is built to expose. The
-// role check (viewers cannot update) is always enforced, so some cells still
-// pass even when broken.
-func Handler(broken bool) http.Handler {
+// (export) on /assets/{id}/export. The role check (viewers cannot update) is
+// always enforced, so some cells still pass even when broken.
+func Handler(mode Mode) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assetID, export := strings.CutSuffix(strings.TrimPrefix(r.URL.Path, "/assets/"), "/export")
-		if r.Method != http.MethodGet && (export || r.Method != http.MethodPut) {
+		read := r.Method == http.MethodGet || (mode == Partial && r.Method == http.MethodHead)
+		if !read && (export || r.Method != http.MethodPut) {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
@@ -48,13 +64,16 @@ func Handler(broken bool) http.Handler {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
+		if t := r.Header.Get("X-Tenant-ID"); mode == Partial && t != "" {
+			id.Tenant = t
+		}
 		owner, ok := owners[assetID]
 		if !ok {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
-		crossTenant := id.Tenant != owner
-		if crossTenant && !(broken && r.Method == http.MethodGet) {
+		skipTenant := (mode == Broken && r.Method == http.MethodGet) || (mode == Partial && r.Method == http.MethodHead)
+		if id.Tenant != owner && !skipTenant {
 			w.WriteHeader(http.StatusForbidden)
 			return
 		}

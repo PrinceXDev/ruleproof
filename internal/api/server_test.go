@@ -27,12 +27,14 @@ func newTestEnv(t *testing.T) *testEnv {
 	}
 	t.Cleanup(func() { st.Close() })
 
-	broken := httptest.NewServer(assets.Handler(true))
-	fixed := httptest.NewServer(assets.Handler(false))
-	t.Cleanup(broken.Close)
-	t.Cleanup(fixed.Close)
+	fixtures := map[string]string{}
+	for name, mode := range assets.Modes {
+		fixture := httptest.NewServer(assets.Handler(mode))
+		t.Cleanup(fixture.Close)
+		fixtures[name] = fixture.URL
+	}
 
-	srv := api.New(st, broken.URL, fixed.URL)
+	srv := api.New(st, fixtures)
 	ts := httptest.NewServer(srv.Routes())
 	t.Cleanup(ts.Close)
 	return &testEnv{server: ts}
@@ -312,5 +314,36 @@ func TestCoverageGapToLeak(t *testing.T) {
 	_, fixed := env.do(t, http.MethodPost, "/api/runs", map[string]string{"planId": revisedID, "fixture": "fixed"})
 	if fixed["passCount"] != 12.0 {
 		t.Fatalf("corrected: want 12 passed, got %v", fixed["passCount"])
+	}
+}
+
+func TestRunWithBypassVariants(t *testing.T) {
+	env := newTestEnv(t)
+	_, plan := env.do(t, http.MethodPost, "/api/plans", map[string]string{"text": sampleRule})
+	planID := plan["id"].(string)
+	env.do(t, http.MethodPost, "/api/plans/"+planID+"/approve", nil)
+
+	_, plain := env.do(t, http.MethodPost, "/api/runs", map[string]any{"planId": planID, "fixture": "partial"})
+	if plain["bypass"] != nil || len(plain["variants"].([]any)) != 0 {
+		t.Fatalf("bypass should be opt-in: %v", plain["bypass"])
+	}
+
+	resp, run := env.do(t, http.MethodPost, "/api/runs", map[string]any{"planId": planID, "fixture": "partial", "bypass": true})
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("bypass run: want 200, got %d: %v", resp.StatusCode, run)
+	}
+	summary := run["bypass"].(map[string]any)
+	if run["passCount"].(float64) != 8 || summary["leaked"].(float64) != 5 || summary["held"].(float64) != 14 || summary["catalog"] != "v1" {
+		t.Fatalf("unexpected partial-fix run: passCount %v, bypass %v", run["passCount"], summary)
+	}
+
+	_, fetched := env.do(t, http.MethodGet, "/api/runs/"+run["id"].(string), nil)
+	if len(fetched["variants"].([]any)) != 19 {
+		t.Fatalf("stored run lost its variants: %d", len(fetched["variants"].([]any)))
+	}
+
+	resp, _ = env.do(t, http.MethodPost, "/api/runs", map[string]any{"planId": planID, "fixture": "staging"})
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("unknown fixture: want 400, got %d", resp.StatusCode)
 	}
 }

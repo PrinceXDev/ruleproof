@@ -17,7 +17,7 @@ Speak an access rule in plain language, approve the exact checks it produces, th
 
 <img src="docs/media/hero-console.gif" width="640" alt="Animated sample: a rule becomes eight checks and two cross-tenant reads fail" />
 
-[Quickstart](#get-started) · [How it works](#how-it-works) · [Screenshots](#explore-the-product) · [Endpoint coverage](#endpoint-coverage) · [Revision diff](#revision-diff) · [CI gate](#ci-gate) · [API](#api) · [Architecture](#architecture) · [Scope](#scope-and-limits)
+[Quickstart](#get-started) · [How it works](#how-it-works) · [Screenshots](#explore-the-product) · [Endpoint coverage](#endpoint-coverage) · [Bypass variants](#bypass-variants) · [Revision diff](#revision-diff) · [CI gate](#ci-gate) · [API](#api) · [Architecture](#architecture) · [Scope](#scope-and-limits)
 
 </div>
 
@@ -39,6 +39,7 @@ Broken access control is the #1 risk in the OWASP Top 10, and it hides in plain 
 | 🎯 | **Exact status matching** | Want 403, got 500? That's a failure. Crashes and redirects never pass as a "deny". |
 | 🔍 | **Evidence inspector** | Rule excerpt → expectation → request (redacted headers) → response body, plus a plain-language explanation. |
 | 🗺️ | **Endpoint coverage** | Maps the rule onto the API's OpenAPI spec and flags object-level endpoints it never mentions, with a sentence that closes the gap. |
+| 🚪 | **Bypass variants** | For every denied request, also tries HEAD, a trailing slash, an upper-case ID, a spoofed `X-Tenant-ID` header and a method override. Catches the fix that only covers the exact request. |
 | 🔀 | **Revision diff** | Before re-approving, see word-level rule edits, every flipped expectation, new or resolved assumptions, and whether an old approval was reset. |
 | 🚦 | **CI gate** | `ruleproof-ci` re-runs an approved plan on every push and fails the build on any mismatch. Refuses unapproved or edited plans. |
 | 🕓 | **Run history and replay** | Every run is stored against the revision it tested. Compare seeded-defect vs corrected side by side. |
@@ -78,6 +79,37 @@ API coverage · 2 of 3 endpoints
 
 ```sh
 curl localhost:8080/api/plans/<revision id>/coverage
+```
+
+## Bypass variants
+
+A fix that passes every approved check can still leave a side door open. With bypass variants on, every check that expects a deny is also tried in the shapes attackers use:
+
+| Variant | Applies to | What it catches |
+|---|---|---|
+| HEAD instead of GET | denied reads and exports | access checks registered only for GET |
+| Trailing slash | every denied check | router and access check normalising paths differently |
+| Upper-case object ID | every denied check | case-insensitive lookup, case-sensitive ownership check |
+| Spoofed `X-Tenant-ID` | cross-tenant checks | trusting a tenant the client claims |
+| POST + `X-HTTP-Method-Override: PUT` | denied updates | method rewritten after the access check |
+
+Variants are generated at run time from the approved plan, so they never change what was approved or the plan's hash. A variant **holds** if the API refuses it with 401, 403, 404 or 405, and **leaks** on any 2xx; a redirect, crash or timeout is inconclusive and never counts as safe.
+
+The third fixture, **Partial fix**, is the case this exists for. It passes all 12 approved checks, yet 9 of 27 attempts get through: HEAD skips its tenant check, and it trusts `X-Tenant-ID` — including an editor updating another tenant's asset.
+
+```
+Bypass attempts · catalog v1 · 27 tried
+
+  LEAKED  editor update other tenant Spoofed X-Tenant-ID header   PUT  /assets/b1          got 200
+  LEAKED  viewer read other tenant   HEAD instead of GET          HEAD /assets/b1          got 200
+  LEAKED  viewer export other tenant Spoofed X-Tenant-ID header   GET  /assets/b1/export   got 200
+  ...
+18 held · 9 leaked · 0 inconclusive
+```
+
+```sh
+curl -X POST localhost:8080/api/runs -d '{"planId":"<id>","fixture":"partial","bypass":true}'
+go run ./cmd/ruleproof-ci -bundle examples/tenant-isolation-export.bundle.json -fixture partial -bypass
 ```
 
 ## Revision diff
@@ -122,13 +154,14 @@ The API does not enforce the approved rule.
 | | |
 |---|---|
 | **Plan source** | `-bundle plan.json` (exported from the studio) or `-server http://host:8080 -plan <id>` |
-| **Target** | `-fixture broken\|fixed` (bundled), or `-base-url https://staging.example.com` for your own API |
+| **Target** | `-fixture broken\|partial\|fixed` (bundled), or `-base-url https://staging.example.com` for your own API |
 | **Credentials** | Demo tokens by default; override per role with `-token viewer=$VIEWER_TOKEN` |
+| **Bypass** | `-bypass` also tries bypass variants of every denied check; any leak fails the build |
 | **Integrity** | Refuses plans that are unapproved, or whose cases no longer match the approved hash |
 | **Exit codes** | `0` all passed · `1` mismatch or error · `2` invalid input or plan |
 | **Reports** | GitHub Actions error annotations and job summary (automatic), JUnit XML with `-junit report.xml`, raw results with `-json` |
 
-This repository dogfoods it: [`.github/workflows/ruleproof.yml`](.github/workflows/ruleproof.yml) requires the example plan to pass on the corrected API **and** to fail on the seeded defect, so the gate is proven to catch the leak.
+This repository dogfoods it: [`.github/workflows/ruleproof.yml`](.github/workflows/ruleproof.yml) requires the example plans to pass on the corrected API with bypass variants, to fail on the seeded defect, and to fail on the partial fix **only** with `-bypass` — so the gate is proven to catch both leaks.
 
 <div align="center">
 <a href="docs/media/studio-ci-hint.png"><img src="docs/media/studio-ci-hint.png" width="900" alt="Verify screen with copy-ready CI commands" /></a>
@@ -205,7 +238,7 @@ DATABASE_URL=postgres://user:password@localhost:5432/ruleproof go run ./cmd/serv
 ### Tests
 
 ```sh
-go test ./...               # backend: store, api, rules, assets, check, diff, coverage, ci
+go test ./...               # backend: store, api, rules, assets, check, bypass, diff, coverage, ci
 cd web && npx tsc --noEmit  # frontend typecheck
 cd web && npx eslint .      # frontend lint
 ```
@@ -219,23 +252,26 @@ Browser (Next.js 16 static export · React 19 · Tailwind v4 · GSAP · Radix UI
 cmd/server (Go)
    ├── internal/api     REST surface, structured JSON errors
    ├── internal/rules   bounded, sentence-scoped rule parser
-   ├── internal/store   immutable plans + runs (SQLite or Postgres via sqlx)
+   ├── internal/store   immutable plans + runs, versioned migrations (SQLite or Postgres via sqlx)
    ├── internal/diff    revision diff: wording, expectations, assumptions
    ├── internal/coverage  rule → OpenAPI endpoint coverage and gaps
+   ├── internal/bypass  run-time bypass variants of every denied check
    └── internal/check   HTTP runner: per-request timeouts, exact status match
           │
           ▼
-internal/assets — synthetic asset API, started twice:
+internal/assets — synthetic asset API, started three times:
    ├── seeded defect  skips the cross-tenant ownership check on reads and exports
+   ├── partial fix    passes every approved check; HEAD skips the check, X-Tenant-ID is trusted
    └── corrected      checks tenant ownership on every request
 ```
 
 | Package | Responsibility |
 |---|---|
 | `internal/rules` | Turns reviewed text into an 8-case plan (12 when the rule mentions export) using a fixed vocabulary. Out-of-vocabulary wording becomes an assumption; every concept keeps its source sentence. |
-| `internal/assets` | Project/tenant-scoped asset API (read, update, export) with its OpenAPI spec and `fixed` and `broken` modes, so a UI-hidden action can still be bypassed at the API. |
+| `internal/assets` | Project/tenant-scoped asset API (read, update, export) with its OpenAPI spec and `fixed`, `partial` and `broken` modes, so a UI-hidden action can still be bypassed at the API. |
+| `internal/bypass` | Derives bypass attempts from an approved plan's deny cases at run time. Versioned catalog; never changes the approved plan. |
 | `internal/check` | Issues approved requests with timeouts and exact status matching, and captures the synthetic response body. Credentials are never captured. |
-| `internal/store` | Immutable plans linked into a lineage; runs replayable across the revision history. |
+| `internal/store` | Immutable plans linked into a lineage; runs (and their bypass attempts) replayable across the revision history. Schema changes are versioned migrations recorded in `schema_migrations`. |
 | `internal/api` | explain → revise → edit → acknowledge → approve → run → history → export. |
 | `internal/diff` | Compares two revisions: phrase-level wording diff, changed/added/removed cases, assumptions and concepts, approval reset. |
 | `internal/coverage` | Maps a plan onto an OpenAPI spec: covered object-level operations with their source sentence, and uncovered ones with a suggested sentence. |
@@ -255,7 +291,7 @@ internal/assets — synthetic asset API, started twice:
 | `PATCH` | `/api/plans/{id}/cases` | Override expectations → new revision |
 | `POST` | `/api/plans/{id}/acknowledge` | Acknowledge parser assumptions |
 | `POST` | `/api/plans/{id}/approve` | Approve this exact revision |
-| `POST` | `/api/runs` | Run an approved plan against `broken` or `fixed` |
+| `POST` | `/api/runs` | Run an approved plan against `broken`, `partial` or `fixed`; `"bypass": true` adds bypass variants |
 | `GET` | `/api/runs/{id}` | Fetch a run with evidence |
 | `GET` | `/api/plans/{id}/history` | Full lineage and every run |
 | `GET` | `/api/plans/{id}/diff` | What changed vs. the parent, or `?base=<id>` |
@@ -280,7 +316,8 @@ curl -X POST localhost:8080/api/plans \
 A passing matrix means **the approved scenarios passed**. It does not prove the whole application is secure.
 
 - Two fixed identities (editor/viewer in tenant A) and two fixed assets (tenant A/B). The vocabulary is intentionally small for this demo, not a general policy language.
-- Execution only targets the two bundled synthetic fixtures; there is no arbitrary-URL testing.
+- Execution only targets the three bundled synthetic fixtures; there is no arbitrary-URL testing.
+- Bypass variants are a fixed, versioned list of common tricks, not a fuzzer. Holding against them is evidence, not a guarantee.
 - No authentication or team approvals yet.
 - `Access-Control-Allow-Origin` defaults to `*` for local development. Set `RULEPROOF_ALLOWED_ORIGIN` to a specific origin before any real deployment. Request bodies are capped at 1MB and the HTTP server sets read/write/idle timeouts.
 
@@ -289,8 +326,9 @@ A passing matrix means **the approved scenarios passed**. It does not prove the 
 1. Explain the recurring problem: checking who can actually access what, beyond what the UI shows.
 2. Dictate the rule. Review shows 8 checks, and coverage flags `GET /assets/{id}/export`: the rule never mentions it.
 3. Add the sentence (or dictate your own), approve the 12-check revision, and run it against the seeded defect. Cross-tenant reads **and** the forgotten export leak, with the CSV as evidence.
-4. Switch to the corrected fixture with the same approved plan: all 12 checks pass.
-5. Show genuine Wispr build usage and the Insights usage card.
+4. Switch to the partial fix: all 12 checks pass — it looks fixed. Turn on bypass variants: 9 attempts leak, including an editor updating another tenant's asset with a spoofed header.
+5. Switch to the corrected fixture with the same approved plan: all 12 checks pass and all 27 bypass attempts are refused.
+6. Show genuine Wispr build usage and the Insights usage card.
 
 ## How this was built with Wispr Flow
 

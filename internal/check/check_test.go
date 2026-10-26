@@ -49,6 +49,26 @@ func TestErrorsAreNotDenials(t *testing.T) {
 	}
 }
 
+func TestVariantsAcceptAnyRefusal(t *testing.T) {
+	cases := map[int]string{200: "fail", 204: "fail", 401: "pass", 403: "pass", 404: "pass", 405: "pass", 302: "error", 500: "error"}
+	for status, want := range cases {
+		var gotHeader string
+		s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			gotHeader = r.Header.Get("X-Tenant-ID")
+			w.WriteHeader(status)
+		}))
+		c := check.Case{Path: "/", Want: 403, Headers: map[string]string{"X-Tenant-ID": "B"}, Variant: &check.Variant{Of: "x", Kind: "tenant-header"}}
+		r := check.Run(context.Background(), s.URL, []check.Case{c})[0]
+		s.Close()
+		if r.Verdict != want {
+			t.Errorf("variant got %d: verdict %s, want %s", status, r.Verdict, want)
+		}
+		if gotHeader != "B" {
+			t.Errorf("variant header not sent, got %q", gotHeader)
+		}
+	}
+}
+
 func TestCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, ApiRequestError } from "@/lib/api";
+import { NO_RUNS } from "@/lib/fixtures";
 import type {
   CheckResult,
   Fixture,
@@ -34,13 +35,13 @@ export default function Home() {
   const [history, setHistory] = useState<History | null>(null);
 
   const [fixture, setFixture] = useState<Fixture>("broken");
-  // Cached per fixture so switching between "seeded defect" and "corrected"
-  // is instant and both results stay on screen for comparison, without
-  // re-running or losing either one.
+  // Cached per fixture so switching between fixtures is instant and every
+  // result stays on screen for comparison, without re-running or losing any.
   const [runsByFixture, setRunsByFixture] = useState<
     Record<Fixture, Run | null>
-  >({ broken: null, fixed: null });
+  >(NO_RUNS);
   const run = runsByFixture[fixture];
+  const [bypass, setBypass] = useState(true);
   const [running, setRunning] = useState(false);
   const [cancelled, setCancelled] = useState(false);
   const runAbortRef = useRef<AbortController | null>(null);
@@ -126,7 +127,7 @@ export default function Home() {
         ? await api.revisePlan(plan.id, text)
         : await api.createPlan(text);
       setPlan(p);
-      setRunsByFixture({ broken: null, fixed: null });
+      setRunsByFixture(NO_RUNS);
       setCancelled(false);
       setViewOverride(null);
       await refreshHistory(p.rootPlanId);
@@ -140,7 +141,7 @@ export default function Home() {
   function handleStartOver() {
     setPlan(null);
     setHistory(null);
-    setRunsByFixture({ broken: null, fixed: null });
+    setRunsByFixture(NO_RUNS);
     setText(SAMPLE_RULE);
     setViewOverride(null);
     setSelectedResultId(null);
@@ -168,7 +169,7 @@ export default function Home() {
     try {
       const p = await api.editCases(plan.id, { [caseId]: want });
       setPlan(p);
-      setRunsByFixture({ broken: null, fixed: null });
+      setRunsByFixture(NO_RUNS);
       setCancelled(false);
       await refreshHistory(p.rootPlanId);
     } catch (e) {
@@ -210,7 +211,7 @@ export default function Home() {
     const controller = new AbortController();
     runAbortRef.current = controller;
     try {
-      const r = await api.createRun(plan.id, fixture, controller.signal);
+      const r = await api.createRun(plan.id, fixture, bypass, controller.signal);
       setRunsByFixture((prev) => ({ ...prev, [fixture]: r }));
       await refreshHistory(plan.rootPlanId);
     } catch (e) {
@@ -265,11 +266,7 @@ export default function Home() {
         setPlan(targetPlan);
       }
       setFixture(historicalRun.fixture);
-      setRunsByFixture({
-        broken: null,
-        fixed: null,
-        [historicalRun.fixture]: historicalRun,
-      });
+      setRunsByFixture({ ...NO_RUNS, [historicalRun.fixture]: historicalRun });
       setCancelled(false);
       setSection("checks");
       setViewOverride(2);
@@ -278,10 +275,12 @@ export default function Home() {
     }
   }
 
-  const selectedCase: PlanCase | null =
-    plan?.cases.find((c) => c.id === selectedResultId) ?? null;
+  // A bypass attempt opens the evidence of the approved case it came from.
   const selectedResult: CheckResult | null =
-    run?.results.find((r) => r.id === selectedResultId) ?? null;
+    [...(run?.results ?? []), ...(run?.variants ?? [])].find((r) => r.id === selectedResultId) ?? null;
+  const selectedCaseId = selectedResult?.variant?.of ?? selectedResultId;
+  const selectedCase: PlanCase | null =
+    plan?.cases.find((c) => c.id === selectedCaseId) ?? null;
 
   const revisionLabel =
     history && plan
@@ -396,6 +395,8 @@ export default function Home() {
               running={running}
               cancelled={cancelled}
               fixture={fixture}
+              bypass={bypass}
+              onBypassChange={setBypass}
               onRun={handleRun}
               onCancel={handleCancelRun}
               onSelectResult={handleSelectResult}

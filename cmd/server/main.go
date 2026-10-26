@@ -1,6 +1,6 @@
-// Command server runs RuleProof's API alongside its two synthetic fixture
-// instances (broken and fixed), so the web UI can run the same approved plan
-// against either one and compare evidence.
+// Command server runs RuleProof's API alongside its synthetic fixture
+// instances (broken, partial and fixed), so the web UI can run the same
+// approved plan against any of them and compare evidence.
 //
 // Storage: set DATABASE_URL to a postgres:// DSN to use PostgreSQL; otherwise
 // a local SQLite file (./ruleproof.db, or RULEPROOF_DB_PATH) is used — no
@@ -31,12 +31,14 @@ func main() {
 	}
 	defer db.Close()
 
-	broken := httptest.NewServer(assets.Handler(true))
-	fixed := httptest.NewServer(assets.Handler(false))
-	defer broken.Close()
-	defer fixed.Close()
+	fixtures := map[string]string{}
+	for name, mode := range assets.Modes {
+		fixture := httptest.NewServer(assets.Handler(mode))
+		defer fixture.Close()
+		fixtures[name] = fixture.URL
+	}
 
-	srv := api.New(db, broken.URL, fixed.URL)
+	srv := api.New(db, fixtures)
 	if origin := os.Getenv("RULEPROOF_ALLOWED_ORIGIN"); origin != "" {
 		srv.AllowedOrigin = origin
 	}
@@ -68,8 +70,9 @@ func main() {
 	fmt.Println("RuleProof API listening on", addr)
 	fmt.Println("  storage:       ", db.Driver())
 	fmt.Println("  web UI:        ", webDir)
-	fmt.Println("  broken fixture:", broken.URL)
-	fmt.Println("  fixed fixture: ", fixed.URL)
+	fmt.Println("  broken fixture: ", fixtures["broken"])
+	fmt.Println("  partial fixture:", fixtures["partial"])
+	fmt.Println("  fixed fixture:  ", fixtures["fixed"])
 
 	httpServer := &http.Server{
 		Addr:              addr,

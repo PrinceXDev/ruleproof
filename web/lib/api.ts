@@ -55,8 +55,8 @@ export const api = {
   exportBundle: (id: string, signal?: AbortSignal) =>
     request<Record<string, unknown>>(`/api/plans/${id}/export`, { signal }),
 
-  createRun: (planId: string, fixture: Fixture, signal?: AbortSignal) =>
-    request<Run>("/api/runs", { method: "POST", body: JSON.stringify({ planId, fixture }), signal }),
+  createRun: (planId: string, fixture: Fixture, bypass: boolean, signal?: AbortSignal) =>
+    request<Run>("/api/runs", { method: "POST", body: JSON.stringify({ planId, fixture, bypass }), signal }),
 
   getRun: (id: string, signal?: AbortSignal) => request<Run>(`/api/runs/${id}`, { signal }),
 };

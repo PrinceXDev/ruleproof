@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, Clock, GitBranch, GitCompareArrows, XCircle } from "lucide-react";
+import { CheckCircle2, Clock, DoorOpen, GitBranch, GitCompareArrows, XCircle } from "lucide-react";
 import clsx from "clsx";
 import type { History, Run } from "@/lib/types";
+import { FIXTURE_LABEL } from "@/lib/fixtures";
 import Badge from "./Badge";
 import RevisionDiff, { useRevisionDiff } from "./RevisionDiff";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
@@ -124,7 +125,7 @@ export default function HistoryPanel({
                   <Clock size={14} className="text-ink-faint" />
                   <span className="text-ink-muted">{new Date(run.createdAt).toLocaleString()}</span>
                   <Badge tone="neutral" className="capitalize">
-                    {run.fixture === "broken" ? "Seeded defect" : "Corrected"}
+                    {FIXTURE_LABEL[run.fixture].long}
                   </Badge>
                 </div>
                 <div className="flex items-center gap-3 font-mono-tnum text-xs">
@@ -134,6 +135,14 @@ export default function HistoryPanel({
                   <span className={clsx("flex items-center gap-1", run.failCount > 0 ? "text-fail" : "text-ink-faint")}>
                     <XCircle size={13} /> {run.failCount}
                   </span>
+                  {run.bypass && (
+                    <span
+                      className={clsx("flex items-center gap-1", run.bypass.leaked > 0 ? "text-fail" : "text-ink-faint")}
+                      title="Bypass attempts that got through"
+                    >
+                      <DoorOpen size={13} /> {run.bypass.leaked}
+                    </span>
+                  )}
                 </div>
               </button>
             </li>

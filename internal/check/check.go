@@ -23,6 +23,19 @@ type Case struct {
 	Path   string `json:"path"`
 	Token  string `json:"-"`
 	Want   int    `json:"expected_status"`
+	// Headers are extra request headers a bypass attempt sends. They are
+	// never credentials, so they are kept as evidence.
+	Headers map[string]string `json:"headers,omitempty"`
+	Variant *Variant          `json:"variant,omitempty"`
+}
+
+// Variant marks a case as a bypass attempt derived from an approved deny case.
+// It is judged by Held rather than by exact status: any refusal counts.
+type Variant struct {
+	Of    string `json:"of"`   // id of the approved case it was derived from
+	Kind  string `json:"kind"` // stable catalog key, e.g. "head-method"
+	Label string `json:"label"`
+	Why   string `json:"why"`
 }
 
 type Result struct {
@@ -35,6 +48,17 @@ type Result struct {
 	// returns nothing but small synthetic asset data — never credentials.
 	// A real integration target would redact this before it reaches here.
 	Body string `json:"body,omitempty"`
+}
+
+// Held reports whether status is a refusal a denied request may legitimately
+// return. A trailing slash can rightly 404 where the original 403s, so
+// variants accept any of these; 3xx and 5xx never count as held.
+func Held(status int) bool {
+	switch status {
+	case 401, 403, 404, 405:
+		return true
+	}
+	return false
 }
 
 // Run issues the plan's requests against base. Callers own target and
@@ -60,6 +84,9 @@ func Run(ctx context.Context, base string, cases []Case) []Result {
 		if err != nil {
 			r.Detail = "invalid request"
 		} else {
+			for k, v := range c.Headers {
+				req.Header.Set(k, v)
+			}
 			if c.Token != "" {
 				req.Header.Set("Authorization", "Bearer "+c.Token)
 			}
@@ -71,15 +98,44 @@ func Run(ctx context.Context, base string, cases []Case) []Result {
 				body, _ := io.ReadAll(io.LimitReader(resp.Body, maxEvidenceBodyBytes))
 				_ = resp.Body.Close()
 				r.Body = string(body)
-				r.Verdict = "fail"
-				if r.Actual == c.Want {
-					r.Verdict = "pass"
-				}
-				r.Detail = fmt.Sprintf("expected HTTP %d; observed HTTP %d", c.Want, r.Actual)
+				r.Verdict, r.Detail = judge(c, r.Actual)
 			}
 		}
 		r.DurationMS = time.Since(started).Milliseconds()
 		results = append(results, r)
 	}
 	return results
+}
+
+func judge(c Case, actual int) (verdict, detail string) {
+	if c.Variant == nil {
+		detail = fmt.Sprintf("expected HTTP %d; observed HTTP %d", c.Want, actual)
+		if actual == c.Want {
+			return "pass", detail
+		}
+		return "fail", detail
+	}
+	switch {
+	case Held(actual):
+		return "pass", fmt.Sprintf("bypass attempt refused with HTTP %d", actual)
+	case actual >= 200 && actual < 300:
+		return "fail", fmt.Sprintf("bypass attempt succeeded with HTTP %d; the denied request got through", actual)
+	default:
+		return "error", fmt.Sprintf("bypass attempt returned HTTP %d; neither a refusal nor access, so no conclusion", actual)
+	}
+}
+
+// Tally counts verdicts.
+func Tally(results []Result) (pass, fail, errored int) {
+	for _, r := range results {
+		switch r.Verdict {
+		case "pass":
+			pass++
+		case "fail":
+			fail++
+		default:
+			errored++
+		}
+	}
+	return pass, fail, errored
 }

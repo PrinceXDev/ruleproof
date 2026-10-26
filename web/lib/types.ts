@@ -3,7 +3,7 @@ export type ActionKind = "read" | "update" | "export";
 export type Scope = "own" | "other";
 export type ExpectedLabel = "allow" | "deny" | "unauthenticated" | "not found" | "unexpected";
 export type Verdict = "pass" | "fail" | "error";
-export type Fixture = "broken" | "fixed";
+export type Fixture = "broken" | "partial" | "fixed";
 export type PlanKind = "root" | "revision" | "edit";
 
 export interface PlanCase {
@@ -53,6 +53,24 @@ export interface CheckResult {
   detail: string;
   duration_ms: number;
   body?: string;
+  headers?: Record<string, string>; // extra, non-credential headers a bypass attempt sent
+  variant?: Variant;
+}
+
+// A bypass attempt derived at run time from an approved deny case. It holds
+// on any refusal (401/403/404/405) and leaks on any 2xx.
+export interface Variant {
+  of: string; // id of the approved case
+  kind: string;
+  label: string;
+  why: string;
+}
+
+export interface BypassSummary {
+  catalog: string;
+  held: number;
+  leaked: number;
+  inconclusive: number;
 }
 
 export interface Run {
@@ -64,6 +82,8 @@ export interface Run {
   passCount: number;
   failCount: number;
   errorCount: number;
+  variants: CheckResult[];
+  bypass?: BypassSummary; // absent when the run did not try bypass variants
   createdAt: string;
 }
 

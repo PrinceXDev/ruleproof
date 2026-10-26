@@ -1,6 +1,7 @@
 import clsx from "clsx";
 import { ChevronRight, Loader2, Menu } from "lucide-react";
 import type { Fixture } from "@/lib/types";
+import { FIXTURES, FIXTURE_LABEL } from "@/lib/fixtures";
 import Stepper from "./Stepper";
 
 export default function TopBar({
@@ -52,7 +53,7 @@ export default function TopBar({
               fixtureDisabled && "opacity-50"
             )}
           >
-            {(["broken", "fixed"] as Fixture[]).map((f) => (
+            {FIXTURES.map((f) => (
               <button
                 key={f}
                 type="button"
@@ -66,8 +67,8 @@ export default function TopBar({
                   !fixtureDisabled && "cursor-pointer"
                 )}
               >
-                <span className="sm:hidden">{f === "broken" ? "Defect" : "Fixed"}</span>
-                <span className="hidden sm:inline">{f === "broken" ? "Seeded defect" : "Corrected"}</span>
+                <span className="sm:hidden">{FIXTURE_LABEL[f].short}</span>
+                <span className="hidden sm:inline">{FIXTURE_LABEL[f].long}</span>
               </button>
             ))}
           </div>
