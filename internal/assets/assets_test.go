@@ -21,7 +21,7 @@ func request(t *testing.T, h http.Handler, method, token, path string) int {
 }
 
 func TestFixedFixtureEnforcesTenantAndRole(t *testing.T) {
-	h := assets.Handler(false)
+	h := assets.Handler(assets.Fixed)
 	cases := []struct {
 		method, token, path string
 		want                int
@@ -50,7 +50,7 @@ func TestFixedFixtureEnforcesTenantAndRole(t *testing.T) {
 }
 
 func TestBrokenFixtureLeaksCrossTenantReadsOnly(t *testing.T) {
-	h := assets.Handler(true)
+	h := assets.Handler(assets.Broken)
 	// the seeded defect: cross-tenant GET succeeds when it should not.
 	if got := request(t, h, "GET", "demo-viewer-a", "/assets/b1"); got != 200 {
 		t.Fatalf("expected seeded cross-tenant read leak (200), got %d", got)
@@ -69,8 +69,38 @@ func TestBrokenFixtureLeaksCrossTenantReadsOnly(t *testing.T) {
 	}
 }
 
+func TestPartialFixtureLooksFixedButTrustsHeadAndTenantHeader(t *testing.T) {
+	partial, fixed := assets.Handler(assets.Partial), assets.Handler(assets.Fixed)
+	// the exact approved requests behave like the corrected fixture.
+	for _, path := range []string{"/assets/b1", "/assets/b1/export"} {
+		if got := request(t, partial, "GET", "demo-viewer-a", path); got != 403 {
+			t.Fatalf("GET %s: want 403, got %d", path, got)
+		}
+	}
+	if got := request(t, partial, "HEAD", "demo-viewer-a", "/assets/b1"); got != 200 {
+		t.Fatalf("partial HEAD should skip the tenant check, got %d", got)
+	}
+	if got := request(t, fixed, "HEAD", "demo-viewer-a", "/assets/b1"); got != 405 {
+		t.Fatalf("fixed HEAD should be refused, got %d", got)
+	}
+	spoof := func(h http.Handler, method string) int {
+		req := httptest.NewRequest(method, "/assets/b1", nil)
+		req.Header.Set("Authorization", "Bearer demo-editor-a")
+		req.Header.Set("X-Tenant-ID", "B")
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+		return rec.Code
+	}
+	if got := spoof(partial, "PUT"); got != 200 {
+		t.Fatalf("partial should trust a spoofed X-Tenant-ID, got %d", got)
+	}
+	if got := spoof(fixed, "PUT"); got != 403 {
+		t.Fatalf("fixed should ignore X-Tenant-ID, got %d", got)
+	}
+}
+
 func TestMethodNotAllowed(t *testing.T) {
-	h := assets.Handler(false)
+	h := assets.Handler(assets.Fixed)
 	if got := request(t, h, "DELETE", "demo-editor-a", "/assets/a1"); got != http.StatusMethodNotAllowed {
 		t.Fatalf("want 405 for unsupported method, got %d", got)
 	}
@@ -80,7 +110,7 @@ func TestExportReturnsValidJSON(t *testing.T) {
 	req := httptest.NewRequest("GET", "/assets/a1/export", nil)
 	req.Header.Set("Authorization", "Bearer demo-viewer-a")
 	rec := httptest.NewRecorder()
-	assets.Handler(false).ServeHTTP(rec, req)
+	assets.Handler(assets.Fixed).ServeHTTP(rec, req)
 	if !json.Valid(rec.Body.Bytes()) {
 		t.Fatalf("export body is not valid JSON: %s", rec.Body.String())
 	}

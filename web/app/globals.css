@@ -85,6 +85,29 @@ body {
   border-color: var(--color-border);
 }
 
+/* Tailwind v4's preflight gives buttons the default cursor. Restore the pointer
+   for everything clickable; in the base layer so a cursor-* utility still wins. */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [role="option"]:not([data-disabled]),
+  [role="tab"],
+  summary,
+  select:not(:disabled),
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled),
+  label:has(> input[type="checkbox"]:not(:disabled)),
+  label:has(> input[type="radio"]:not(:disabled)) {
+    cursor: pointer;
+  }
+  button:disabled,
+  select:disabled,
+  input:disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+}
+
 ::selection {
   background: var(--color-brand);
   color: var(--color-brand-ink);

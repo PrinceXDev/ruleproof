@@ -5,8 +5,11 @@
 // or straight from a running RuleProof server. It refuses to run a plan that
 // is unapproved or was edited after approval.
 //
-// Exit codes: 0 all checks passed, 1 at least one check failed or errored,
-// 2 bad input (flags, unapproved or tampered plan, unreachable server).
+// With -bypass it also tries bypass variants of every deny case (HEAD instead
+// of GET, a spoofed tenant header, ...) and fails the build if any gets in.
+//
+// Exit codes: 0 all checks passed, 1 at least one check or bypass attempt
+// failed or errored, 2 bad input (flags, unapproved or tampered plan, unreachable server).
 package main
 
 import (
@@ -24,6 +27,7 @@ import (
 	"time"
 
 	"ruleproof/internal/assets"
+	"ruleproof/internal/bypass"
 	"ruleproof/internal/check"
 	"ruleproof/internal/rules"
 )
@@ -64,10 +68,11 @@ func run(args []string, stdout, stderr io.Writer, getenv func(string) string) in
 	bundlePath := fs.String("bundle", "", "path to an exported evidence bundle (JSON)")
 	server := fs.String("server", "", "RuleProof server to fetch the plan from, e.g. http://localhost:8080")
 	planID := fs.String("plan", "", "plan id to fetch from -server")
-	fixture := fs.String("fixture", "", `run against a bundled fixture: "broken" or "fixed"`)
+	fixture := fs.String("fixture", "", `run against a bundled fixture: "broken", "partial" or "fixed"`)
 	baseURL := fs.String("base-url", "", "run against your own API at this base URL instead of a fixture")
 	junitPath := fs.String("junit", "", "also write a JUnit XML report to this path")
 	asJSON := fs.Bool("json", false, "print results as JSON instead of a table")
+	tryBypass := fs.Bool("bypass", false, "also try bypass variants of every deny case")
 	timeout := fs.Duration("timeout", 30*time.Second, "overall time limit for the run")
 	tokens := tokenFlags{}
 	fs.Var(tokens, "token", "override the bearer token for a role (repeatable): -token viewer=...")
@@ -86,8 +91,9 @@ func run(args []string, stdout, stderr io.Writer, getenv func(string) string) in
 	if (*fixture == "") == (*baseURL == "") {
 		return fail(usageError{"pass exactly one of -fixture or -base-url"})
 	}
-	if *fixture != "" && *fixture != "broken" && *fixture != "fixed" {
-		return fail(usageError{`-fixture must be "broken" or "fixed"`})
+	mode, knownFixture := assets.Modes[*fixture]
+	if *fixture != "" && !knownFixture {
+		return fail(usageError{`-fixture must be "broken", "partial" or "fixed"`})
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), *timeout)
@@ -128,13 +134,18 @@ func run(args []string, stdout, stderr io.Writer, getenv func(string) string) in
 	target := *baseURL
 	label := "base URL " + target
 	if *fixture != "" {
-		srv := httptest.NewServer(assets.Handler(*fixture == "broken"))
+		srv := httptest.NewServer(assets.Handler(mode))
 		defer srv.Close()
 		target = srv.URL
-		label = map[string]string{"broken": "seeded-defect fixture", "fixed": "corrected fixture"}[*fixture]
+		label = map[string]string{"broken": "seeded-defect fixture", "partial": "partial-fix fixture", "fixed": "corrected fixture"}[*fixture]
 	}
 
-	results := check.Run(ctx, strings.TrimRight(target, "/"), cases)
+	target = strings.TrimRight(target, "/")
+	results := check.Run(ctx, target, cases)
+	var variants []check.Result
+	if *tryBypass {
+		variants = check.Run(ctx, target, bypass.Expand(b.Plan.Cases, cases))
+	}
 	byID := make(map[string]rules.Case, len(b.Plan.Cases))
 	for _, c := range b.Plan.Cases {
 		byID[c.ID] = c
@@ -143,25 +154,33 @@ func run(args []string, stdout, stderr io.Writer, getenv func(string) string) in
 	if *asJSON {
 		enc := json.NewEncoder(stdout)
 		enc.SetIndent("", "  ")
-		_ = enc.Encode(results)
+		if *tryBypass {
+			_ = enc.Encode(map[string]any{"results": results, "variants": variants, "bypassCatalog": bypass.Catalog})
+		} else {
+			_ = enc.Encode(results)
+		}
 	} else {
 		printTable(stdout, &b, label, results, byID)
+		if *tryBypass {
+			printVariants(stdout, variants, byID)
+		}
 	}
+	all := append(append([]check.Result{}, results...), variants...)
 	if *junitPath != "" {
-		if err := writeJUnit(*junitPath, &b, results); err != nil {
+		if err := writeJUnit(*junitPath, &b, all); err != nil {
 			return fail(err)
 		}
 	}
 	if getenv("GITHUB_ACTIONS") == "true" {
-		annotate(stdout, results, byID)
+		annotate(stdout, all, byID)
 		if path := getenv("GITHUB_STEP_SUMMARY"); path != "" {
-			if err := appendSummary(path, &b, label, results, byID); err != nil {
+			if err := appendSummary(path, &b, label, results, variants, byID); err != nil {
 				fmt.Fprintln(stderr, "ruleproof-ci: could not write step summary:", err)
 			}
 		}
 	}
 
-	for _, r := range results {
+	for _, r := range all {
 		if r.Verdict != "pass" {
 			return 1
 		}
@@ -216,6 +235,47 @@ func describe(c rules.Case) string {
 	return fmt.Sprintf("%s %s %s tenant", c.Role, c.Action, c.Scope)
 }
 
+// approvedCase finds the plan case a result belongs to; bypass attempts
+// belong to the deny case they were derived from.
+func approvedCase(r check.Result, byID map[string]rules.Case) rules.Case {
+	if r.Variant != nil {
+		return byID[r.Variant.Of]
+	}
+	return byID[r.ID]
+}
+
+func title(r check.Result, byID map[string]rules.Case) string {
+	if r.Variant != nil {
+		return describe(approvedCase(r, byID)) + " via " + r.Variant.Label
+	}
+	return describe(byID[r.ID])
+}
+
+// printVariants lists only the attempts that got through or were
+// inconclusive; held attempts are counted, since there are many of them.
+func printVariants(w io.Writer, variants []check.Result, byID map[string]rules.Case) {
+	held, leaked, inconclusive := check.Tally(variants)
+	fmt.Fprintf(w, "\nBypass attempts · catalog %s · %d tried\n", bypass.Catalog, len(variants))
+	pathWidth := 12
+	for _, r := range variants {
+		pathWidth = max(pathWidth, len(r.Path))
+	}
+	if leaked+inconclusive > 0 {
+		fmt.Fprintln(w)
+	}
+	for _, r := range variants {
+		if r.Verdict == "pass" {
+			continue
+		}
+		mark := map[string]string{"fail": "LEAKED", "error": "UNSURE"}[r.Verdict]
+		fmt.Fprintf(w, "  %s  %-26s %-38s %-4s %-*s got %d\n", mark, describe(approvedCase(r, byID)), r.Variant.Label, r.Method, pathWidth, r.Path, r.Actual)
+	}
+	fmt.Fprintf(w, "\n%d held · %d leaked · %d inconclusive\n", held, leaked, inconclusive)
+	if leaked > 0 {
+		fmt.Fprintln(w, "The approved checks pass only for the exact requests; variants of denied requests still get through.")
+	}
+}
+
 func printTable(w io.Writer, b *bundle, label string, results []check.Result, byID map[string]rules.Case) {
 	fmt.Fprintf(w, "RuleProof CI · plan %s · hash %s · %s\n", b.Plan.ID, b.Plan.Hash, label)
 	fmt.Fprintf(w, "Rule: %q\n\n", b.Plan.RuleText)
@@ -258,7 +318,7 @@ func annotate(w io.Writer, results []check.Result, byID map[string]rules.Case) {
 			got = fmt.Sprint(r.Actual)
 		}
 		fmt.Fprintf(w, "::error title=RuleProof: %s::Expected %d, got %s for %s %s (%s)\n",
-			describe(byID[r.ID]), r.Want, got, r.Method, r.Path, escape(r.Detail))
+			title(r, byID), r.Want, got, r.Method, r.Path, escape(r.Detail))
 	}
 }
 
@@ -266,7 +326,7 @@ func escape(s string) string {
 	return strings.NewReplacer("%", "%25", "\r", "%0D", "\n", "%0A").Replace(s)
 }
 
-func appendSummary(path string, b *bundle, label string, results []check.Result, byID map[string]rules.Case) error {
+func appendSummary(path string, b *bundle, label string, results, variants []check.Result, byID map[string]rules.Case) error {
 	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
 		return err
@@ -282,6 +342,20 @@ func appendSummary(path string, b *bundle, label string, results []check.Result,
 			actual = fmt.Sprint(r.Actual)
 		}
 		fmt.Fprintf(&sb, "| %s %s | %s | `%s %s` | %d | %s |\n", icon, r.Verdict, describe(byID[r.ID]), r.Method, r.Path, r.Want, actual)
+	}
+	if len(variants) > 0 {
+		held, leaked, inconclusive := check.Tally(variants)
+		fmt.Fprintf(&sb, "\n### Bypass attempts · %d held · %d leaked · %d inconclusive\n\n", held, leaked, inconclusive)
+		if leaked+inconclusive > 0 {
+			sb.WriteString("| Result | Check | Variant | Request | Actual |\n|---|---|---|---|---|\n")
+			for _, r := range variants {
+				if r.Verdict == "pass" {
+					continue
+				}
+				icon := map[string]string{"fail": "❌ leaked", "error": "⚠️ inconclusive"}[r.Verdict]
+				fmt.Fprintf(&sb, "| %s | %s | %s | `%s %s` | %d |\n", icon, describe(approvedCase(r, byID)), r.Variant.Label, r.Method, r.Path, r.Actual)
+			}
+		}
 	}
 	fmt.Fprintf(&sb, "\nPlan `%s` · hash `%s`. A passing run means the approved scenarios passed; it does not prove the whole application is secure.\n\n", b.Plan.ID, b.Plan.Hash)
 	_, err = f.WriteString(sb.String())

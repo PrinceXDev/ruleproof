@@ -57,11 +57,15 @@ export default function EvidenceDrawer({
   if (!open || !result || !planCase) return null;
 
   const passed = result.verdict === "pass";
-  const isCrossTenantLeak = planCase.scope === "other" && result.verdict === "fail";
+  const variant = result.variant;
+  // HEAD leaks carry no body, so only claim leaked data when there is some.
+  const isCrossTenantLeak = planCase.scope === "other" && result.verdict === "fail" && !!result.body;
+  const extraHeaders = Object.entries(result.headers ?? {});
 
   const evidenceJson = JSON.stringify(
     {
       case: planCase.id,
+      bypassVariant: variant ? { kind: variant.kind, label: variant.label } : undefined,
       role: planCase.role,
       action: planCase.action,
       scope: planCase.scope,
@@ -72,6 +76,7 @@ export default function EvidenceDrawer({
       verdict: result.verdict,
       method: result.method,
       path: result.path,
+      requestHeaders: result.headers,
       durationMs: result.duration_ms,
       runId: run?.id,
       fixture: run?.fixture,
@@ -96,7 +101,7 @@ export default function EvidenceDrawer({
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `ruleproof-evidence-${planCase!.id}.json`;
+    a.download = `ruleproof-evidence-${result!.id}.json`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -123,9 +128,12 @@ export default function EvidenceDrawer({
               <h2 id="evidence-title" className="text-sm font-semibold text-ink">
                 {ROLE_LABEL[planCase.role]} → {ACTION_LABEL[planCase.action]} → {planCase.scope === "own" ? "Own tenant" : "Other tenant"}
               </h2>
+              {variant && <p className="mt-0.5 text-xs text-ink-muted">Bypass attempt: {variant.label}</p>}
               <div className="mt-1.5">
                 <Badge tone={passed ? "pass" : result.verdict === "fail" ? "fail" : "attn"}>
-                  {passed ? "Passed" : result.verdict === "fail" ? "Failed" : "Error"}
+                  {variant
+                    ? passed ? "Held" : result.verdict === "fail" ? "Leaked" : "Inconclusive"
+                    : passed ? "Passed" : result.verdict === "fail" ? "Failed" : "Error"}
                 </Badge>
               </div>
             </div>
@@ -140,6 +148,19 @@ export default function EvidenceDrawer({
           </div>
 
           <div className="flex-1 overflow-y-auto px-5 py-4 text-sm">
+            {variant && (
+              <p
+                className={clsx(
+                  "mb-4 rounded-md border px-3 py-2.5 text-ink",
+                  result.verdict === "fail" ? "border-fail/30 bg-fail/5" : "border-border bg-panel-elevated"
+                )}
+              >
+                {result.verdict === "fail"
+                  ? "The approved request is denied, but this variant of it got through. "
+                  : "A variant of an approved, denied request. "}
+                <span className="text-ink-muted">{variant.why}</span>
+              </p>
+            )}
             {isCrossTenantLeak && (
               <p className="mb-4 rounded-md border border-fail/30 bg-fail/5 px-3 py-2.5 text-ink">
                 The {planCase.role} belongs to tenant {planCase.assetOwner === "A" ? "B" : "A"}. This response
@@ -163,7 +184,7 @@ export default function EvidenceDrawer({
             <Section label="Expected vs. actual">
               <div className="flex items-center gap-3 font-mono-tnum text-xs">
                 <span className="rounded border border-border px-2 py-1 text-ink-muted">
-                  expected {result.expected_status}
+                  {variant ? "expected a refusal" : `expected ${result.expected_status}`}
                 </span>
                 <span className="text-ink-faint">→</span>
                 <span
@@ -196,6 +217,11 @@ export default function EvidenceDrawer({
               <div className="rounded-md border border-border bg-panel-elevated px-3 py-2 font-mono-tnum text-xs text-ink-muted">
                 <div>Authorization: Bearer ••••••••</div>
                 <div>Accept: application/json</div>
+                {extraHeaders.map(([k, v]) => (
+                  <div key={k} className="text-ink">
+                    {k}: {v}
+                  </div>
+                ))}
               </div>
             </Section>
 

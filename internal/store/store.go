@@ -22,6 +22,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 	_ "modernc.org/sqlite"
 
+	"ruleproof/internal/bypass"
 	"ruleproof/internal/check"
 	"ruleproof/internal/rules"
 )
@@ -66,6 +67,10 @@ type Run struct {
 	FailCount  int
 	ErrorCount int
 	CreatedAt  time.Time
+	// Variants are bypass attempts derived from the plan's deny cases, empty
+	// unless the run asked for them. They never count toward the totals above.
+	Variants      []check.Result
+	BypassCatalog string // catalog version the variants came from; "" when not run
 }
 
 // allowedStatuses is the bounded, explicit set of outcomes a reviewer may
@@ -122,11 +127,15 @@ func (s *Store) Close() error { return s.db.Close() }
 // for surfacing in diagnostics.
 func (s *Store) Driver() string { return s.driver }
 
-// migrationStatements is deliberately one DDL statement per entry: pgx's
-// default extended query protocol rejects multiple commands in one Exec,
-// while SQLite tolerates either — splitting keeps both engines happy.
-var migrationStatements = []string{
-	`CREATE TABLE IF NOT EXISTS plans (
+// migrations are applied in order and recorded in schema_migrations, so a
+// column added later reaches databases created earlier; version N is
+// migrations[N-1]. Never edit or reorder an applied entry, only append.
+// Each statement is its own entry: pgx's default extended query protocol
+// rejects multiple commands in one Exec, while SQLite tolerates either.
+var migrations = [][]string{
+	// 1: initial schema. IF NOT EXISTS lets it adopt databases created before
+	// migrations were versioned.
+	{`CREATE TABLE IF NOT EXISTS plans (
 	id TEXT PRIMARY KEY,
 	root_plan_id TEXT NOT NULL,
 	parent_plan_id TEXT NOT NULL DEFAULT '',
@@ -140,9 +149,9 @@ var migrationStatements = []string{
 	approved_at TEXT,
 	created_at TEXT NOT NULL
 )`,
-	`CREATE INDEX IF NOT EXISTS idx_plans_root ON plans(root_plan_id)`,
-	`CREATE INDEX IF NOT EXISTS idx_plans_parent ON plans(parent_plan_id)`,
-	`CREATE TABLE IF NOT EXISTS runs (
+		`CREATE INDEX IF NOT EXISTS idx_plans_root ON plans(root_plan_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_plans_parent ON plans(parent_plan_id)`,
+		`CREATE TABLE IF NOT EXISTS runs (
 	id TEXT PRIMARY KEY,
 	plan_id TEXT NOT NULL,
 	plan_hash TEXT NOT NULL,
@@ -153,16 +162,52 @@ var migrationStatements = []string{
 	error_count INTEGER NOT NULL,
 	created_at TEXT NOT NULL
 )`,
-	`CREATE INDEX IF NOT EXISTS idx_runs_plan ON runs(plan_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_runs_plan ON runs(plan_id)`},
+	// 2: bypass attempts, kept apart from the approved checks.
+	{`ALTER TABLE runs ADD COLUMN variants_json TEXT NOT NULL DEFAULT '[]'`,
+		`ALTER TABLE runs ADD COLUMN bypass_catalog TEXT NOT NULL DEFAULT ''`},
 }
 
 func (s *Store) migrate() error {
-	for _, stmt := range migrationStatements {
-		if _, err := s.db.Exec(stmt); err != nil {
-			return fmt.Errorf("migrate: %s: %w", stmt, err)
+	if _, err := s.db.Exec(`CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL)`); err != nil {
+		return fmt.Errorf("migrate: %w", err)
+	}
+	current, err := s.SchemaVersion(context.Background())
+	if err != nil {
+		return fmt.Errorf("migrate: read version: %w", err)
+	}
+	for i := current; i < len(migrations); i++ {
+		if err := s.applyMigration(i+1, migrations[i]); err != nil {
+			return err
 		}
 	}
 	return nil
+}
+
+// applyMigration runs one version in a transaction (DDL is transactional on
+// both engines), so a failed step leaves the version unrecorded and retryable.
+func (s *Store) applyMigration(version int, stmts []string) error {
+	tx, err := s.db.Beginx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	for _, stmt := range stmts {
+		if _, err := tx.Exec(stmt); err != nil {
+			return fmt.Errorf("migrate %d: %s: %w", version, stmt, err)
+		}
+	}
+	if _, err := tx.Exec(s.db.Rebind(`INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)`), version, time.Now().UTC().Format(time.RFC3339Nano)); err != nil {
+		return fmt.Errorf("migrate %d: %w", version, err)
+	}
+	return tx.Commit()
+}
+
+// SchemaVersion reports the highest applied migration.
+func (s *Store) SchemaVersion(ctx context.Context) (int, error) {
+	var v int
+	err := s.db.GetContext(ctx, &v, `SELECT COALESCE(MAX(version), 0) FROM schema_migrations`)
+	return v, err
 }
 
 // exec/queryRow/query rebind '?' placeholders for the active driver (a
@@ -220,7 +265,6 @@ func decodeCases(raw string) ([]rules.Case, error) {
 	}
 	return cases, nil
 }
-
 
 // CreateRootPlan interprets freshly dictated or typed text into a brand new
 // plan lineage.
@@ -459,10 +503,15 @@ func scanPlanRows(rows *sql.Rows) (*Plan, error) {
 	return &p, nil
 }
 
+// RunOptions tunes a run beyond the approved plan itself.
+type RunOptions struct {
+	Bypass bool // also try bypass variants of every deny case
+}
+
 // RunPlan executes an approved plan's cases against baseURL and persists the
-// evidence. fixture is a label only ("broken"/"fixed"); baseURL decides what
-// actually gets called.
-func (s *Store) RunPlan(ctx context.Context, planID, fixture, baseURL string) (*Run, error) {
+// evidence. fixture is a label only ("broken"/"partial"/"fixed"); baseURL
+// decides what actually gets called.
+func (s *Store) RunPlan(ctx context.Context, planID, fixture, baseURL string, opts RunOptions) (*Run, error) {
 	p, err := s.GetPlan(ctx, planID)
 	if err != nil {
 		return nil, err
@@ -478,35 +527,37 @@ func (s *Store) RunPlan(ctx context.Context, planID, fixture, baseURL string) (*
 		})
 	}
 	results := check.Run(ctx, baseURL, cases)
-	var pass, fail, errCount int
-	for _, r := range results {
-		switch r.Verdict {
-		case "pass":
-			pass++
-		case "fail":
-			fail++
-		default:
-			errCount++
-		}
-	}
+	pass, fail, errCount := check.Tally(results)
 	run := &Run{
 		ID: uuid.NewString(), PlanID: p.ID, PlanHash: p.Hash, Fixture: fixture,
 		Results: results, PassCount: pass, FailCount: fail, ErrorCount: errCount, CreatedAt: time.Now().UTC(),
+		Variants: []check.Result{},
+	}
+	if opts.Bypass {
+		run.Variants = check.Run(ctx, baseURL, bypass.Expand(p.Cases, cases))
+		run.BypassCatalog = bypass.Catalog
 	}
 	resultsJSON, err := json.Marshal(run.Results)
 	if err != nil {
 		return nil, err
 	}
-	_, err = s.exec(ctx, `INSERT INTO runs (id, plan_id, plan_hash, fixture, results_json, pass_count, fail_count, error_count, created_at) VALUES (?,?,?,?,?,?,?,?,?)`,
-		run.ID, run.PlanID, run.PlanHash, run.Fixture, string(resultsJSON), run.PassCount, run.FailCount, run.ErrorCount, run.CreatedAt.Format(time.RFC3339Nano))
+	variantsJSON, err := json.Marshal(run.Variants)
+	if err != nil {
+		return nil, err
+	}
+	_, err = s.exec(ctx, `INSERT INTO runs (`+runColumns+`) VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+		run.ID, run.PlanID, run.PlanHash, run.Fixture, string(resultsJSON), run.PassCount, run.FailCount, run.ErrorCount, run.CreatedAt.Format(time.RFC3339Nano),
+		string(variantsJSON), run.BypassCatalog)
 	if err != nil {
 		return nil, err
 	}
 	return run, nil
 }
 
+const runColumns = `id, plan_id, plan_hash, fixture, results_json, pass_count, fail_count, error_count, created_at, variants_json, bypass_catalog`
+
 func (s *Store) GetRun(ctx context.Context, id string) (*Run, error) {
-	row := s.queryRow(ctx, `SELECT id, plan_id, plan_hash, fixture, results_json, pass_count, fail_count, error_count, created_at FROM runs WHERE id = ?`, id)
+	row := s.queryRow(ctx, `SELECT `+runColumns+` FROM runs WHERE id = ?`, id)
 	return scanRun(row)
 }
 
@@ -515,7 +566,7 @@ func (s *Store) GetRun(ctx context.Context, id string) (*Run, error) {
 // needs to compare today's result against yesterday's, across edits.
 func (s *Store) ListRunsForLineage(ctx context.Context, rootID string) ([]*Run, error) {
 	rows, err := s.query(ctx, `
-		SELECT r.id, r.plan_id, r.plan_hash, r.fixture, r.results_json, r.pass_count, r.fail_count, r.error_count, r.created_at
+		SELECT r.id, r.plan_id, r.plan_hash, r.fixture, r.results_json, r.pass_count, r.fail_count, r.error_count, r.created_at, r.variants_json, r.bypass_catalog
 		FROM runs r JOIN plans p ON p.id = r.plan_id
 		WHERE p.root_plan_id = ?
 		ORDER BY r.created_at DESC`, rootID)
@@ -535,30 +586,25 @@ func (s *Store) ListRunsForLineage(ctx context.Context, rootID string) ([]*Run, 
 }
 
 func scanRun(row *sql.Row) (*Run, error) {
-	var r Run
-	var resultsJSON, createdAt string
-	if err := row.Scan(&r.ID, &r.PlanID, &r.PlanHash, &r.Fixture, &resultsJSON, &r.PassCount, &r.FailCount, &r.ErrorCount, &createdAt); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrNotFound
-		}
-		return nil, err
+	r, err := scanRunFrom(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
 	}
-	if err := json.Unmarshal([]byte(resultsJSON), &r.Results); err != nil {
-		return nil, err
-	}
-	if t, err := time.Parse(time.RFC3339Nano, createdAt); err == nil {
-		r.CreatedAt = t
-	}
-	return &r, nil
+	return r, err
 }
 
-func scanRunRows(rows *sql.Rows) (*Run, error) {
+func scanRunRows(rows *sql.Rows) (*Run, error) { return scanRunFrom(rows) }
+
+func scanRunFrom(sc interface{ Scan(...any) error }) (*Run, error) {
 	var r Run
-	var resultsJSON, createdAt string
-	if err := rows.Scan(&r.ID, &r.PlanID, &r.PlanHash, &r.Fixture, &resultsJSON, &r.PassCount, &r.FailCount, &r.ErrorCount, &createdAt); err != nil {
+	var resultsJSON, variantsJSON, createdAt string
+	if err := sc.Scan(&r.ID, &r.PlanID, &r.PlanHash, &r.Fixture, &resultsJSON, &r.PassCount, &r.FailCount, &r.ErrorCount, &createdAt, &variantsJSON, &r.BypassCatalog); err != nil {
 		return nil, err
 	}
 	if err := json.Unmarshal([]byte(resultsJSON), &r.Results); err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal([]byte(variantsJSON), &r.Variants); err != nil {
 		return nil, err
 	}
 	if t, err := time.Parse(time.RFC3339Nano, createdAt); err == nil {

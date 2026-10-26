@@ -122,7 +122,7 @@ func TestGitHubAnnotationsSummaryAndJUnit(t *testing.T) {
 func TestBaseURLWithTokenOverride(t *testing.T) {
 	// The fixture only knows demo tokens, so a wrong override must surface as
 	// failures rather than being silently ignored.
-	srv := httptest.NewServer(assets.Handler(false))
+	srv := httptest.NewServer(assets.Handler(assets.Fixed))
 	defer srv.Close()
 	code, out, _ := exec(t, noEnv, "-bundle", writeBundle(t, true, false), "-base-url", srv.URL, "-token", "viewer=wrong")
 	if code != 1 || !strings.Contains(out, "want 200  got 401") {
@@ -136,7 +136,7 @@ func TestFetchesApprovedPlanFromServer(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer st.Close()
-	ts := httptest.NewServer(api.New(st, "", "").Routes())
+	ts := httptest.NewServer(api.New(st, nil).Routes())
 	defer ts.Close()
 
 	resp, err := http.Post(ts.URL+"/api/plans", "application/json", strings.NewReader(`{"text":"`+sampleRule+`"}`))
@@ -157,5 +157,28 @@ func TestFetchesApprovedPlanFromServer(t *testing.T) {
 	resp.Body.Close()
 	if code, out, errOut := exec(t, noEnv, "-server", ts.URL, "-plan", plan.ID, "-fixture", "fixed"); code != 0 {
 		t.Fatalf("approved via server: exit %d\n%s%s", code, out, errOut)
+	}
+}
+
+func TestBypassCatchesWhatApprovedChecksMiss(t *testing.T) {
+	bundle := writeBundle(t, true, false)
+	if code, out, _ := exec(t, noEnv, "-bundle", bundle, "-fixture", "partial"); code != 0 {
+		t.Fatalf("partial fix without -bypass: exit %d, want 0\n%s", code, out)
+	}
+	code, out, _ := exec(t, noEnv, "-bundle", bundle, "-fixture", "partial", "-bypass")
+	if code != 1 || !strings.Contains(out, "14 held · 5 leaked · 0 inconclusive") || !strings.Contains(out, "LEAKED  viewer read other tenant") {
+		t.Fatalf("partial fix with -bypass: exit %d, want 1\n%s", code, out)
+	}
+	if code, out, _ := exec(t, noEnv, "-bundle", bundle, "-fixture", "fixed", "-bypass"); code != 0 || !strings.Contains(out, "19 held · 0 leaked") {
+		t.Fatalf("fixed with -bypass: exit %d, want 0\n%s", code, out)
+	}
+}
+
+func TestBypassLeaksBecomeJUnitFailures(t *testing.T) {
+	junit := filepath.Join(t.TempDir(), "junit.xml")
+	exec(t, noEnv, "-bundle", writeBundle(t, true, false), "-fixture", "partial", "-bypass", "-junit", junit)
+	xmlOut, err := os.ReadFile(junit)
+	if err != nil || !strings.Contains(string(xmlOut), `tests="27" failures="5"`) || !strings.Contains(string(xmlOut), "~head-method") {
+		t.Fatalf("junit should list 8 checks + 19 attempts with 5 failures (err %v):\n%s", err, xmlOut)
 	}
 }

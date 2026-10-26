@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
-import { Ban, Check, CheckCircle2, Clock, Download, Loader2, Search, TerminalSquare, XCircle } from "lucide-react";
-import type { Fixture, Plan, Run } from "@/lib/types";
+import { Ban, Check, CheckCircle2, Clock, DoorOpen, Download, Loader2, Search, TerminalSquare, XCircle } from "lucide-react";
+import type { CheckResult, Fixture, Plan, Run } from "@/lib/types";
+import { FIXTURE_LABEL } from "@/lib/fixtures";
 import Badge from "./Badge";
 import CopyButton from "./landing/CopyButton";
 import { useGSAP, gsap } from "@/lib/gsap";
@@ -20,6 +21,8 @@ export default function VerifyScreen({
   running,
   cancelled,
   fixture,
+  bypass,
+  onBypassChange,
   onRun,
   onCancel,
   onSelectResult,
@@ -31,6 +34,8 @@ export default function VerifyScreen({
   running: boolean;
   cancelled: boolean;
   fixture: Fixture;
+  bypass: boolean;
+  onBypassChange: (on: boolean) => void;
   onRun: () => void;
   onCancel: () => void;
   onSelectResult: (caseId: string) => void;
@@ -102,7 +107,9 @@ export default function VerifyScreen({
     prevVerdicts.current = new Map(run.results.map((r) => [r.id, r.verdict]));
 
     if (announceRef.current) {
-      announceRef.current.textContent = `Run complete: ${run.passCount} passed, ${run.failCount} failed.`;
+      announceRef.current.textContent =
+        `Run complete: ${run.passCount} passed, ${run.failCount} failed.` +
+        (run.bypass ? ` ${run.bypass.leaked} of ${run.variants.length} bypass attempts got through.` : "");
     }
   }, [run, rowsCtx]);
 
@@ -122,7 +129,7 @@ export default function VerifyScreen({
 
       <h1 className="text-2xl font-semibold tracking-tight text-ink">Does the API follow the rule?</h1>
       <p className="mt-1.5 text-sm text-ink-muted">
-        Running the approved plan against the <span className="text-ink">{fixture === "broken" ? "seeded-defect" : "corrected"}</span> fixture.
+        Running the approved plan against the <span className="text-ink">{FIXTURE_LABEL[fixture].long.toLowerCase()}</span> fixture.
       </p>
 
       <div data-verify-reveal className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-panel px-4 py-3">
@@ -140,12 +147,33 @@ export default function VerifyScreen({
                   <Ban size={15} /> <span className="font-mono-tnum">{run.errorCount}</span> error
                 </span>
               )}
+              {run.bypass && (
+                <span className={clsx("flex items-center gap-1.5", run.bypass.leaked > 0 ? "text-fail" : "text-ink-muted")}>
+                  <DoorOpen size={15} /> <span className="font-mono-tnum">{run.bypass.leaked}</span> bypassed
+                </span>
+              )}
             </>
           ) : (
             <span className="text-ink-muted">{running ? "Running checks…" : "Not yet run"}</span>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <label
+            className={clsx(
+              "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-ink-muted",
+              running ? "opacity-50" : "cursor-pointer hover:text-ink"
+            )}
+            title="For every check that expects a deny, also try HEAD, a trailing slash, an upper-case ID, a spoofed tenant header and a method override."
+          >
+            <input
+              type="checkbox"
+              checked={bypass}
+              disabled={running}
+              onChange={(e) => onBypassChange(e.target.checked)}
+              className="size-3.5 accent-[var(--color-brand)]"
+            />
+            Try bypass variants
+          </label>
           {run && !running && (
             <button
               type="button"
@@ -276,7 +304,11 @@ export default function VerifyScreen({
         </ul>
       </div>
 
-      {run && !running && <CiHint plan={plan} />}
+      {run && !running && (
+        <BypassSection run={run} plan={plan} bypassOn={bypass} onSelect={onSelectResult} selectedId={selectedId} />
+      )}
+
+      {run && !running && <CiHint plan={plan} bypass={bypass} />}
     </div>
   );
 }
@@ -286,22 +318,164 @@ export default function VerifyScreen({
 // Names the actions that actually leaked, so a plan that also tests export
 // doesn't report every failure as a "read".
 function runSummary(run: Run, plan: Plan): string {
-  if (run.failCount + run.errorCount === 0) return "Cross-tenant access returns 403. All approved checks passed.";
+  const leaked = run.bypass?.leaked ?? 0;
+  if (run.failCount + run.errorCount === 0) {
+    if (leaked > 0) {
+      return `All approved checks passed, but ${leaked} bypass ${leaked === 1 ? "attempt" : "attempts"} got through. The fix only covers the exact requests.`;
+    }
+    return run.bypass
+      ? `Cross-tenant access returns 403. All approved checks passed, and all ${run.variants.length} bypass attempts were refused.`
+      : "Cross-tenant access returns 403. All approved checks passed.";
+  }
   const byId = new Map(plan.cases.map((c) => [c.id, c]));
-  const leaked = new Set<string>();
+  const leakedActions = new Set<string>();
   for (const r of run.results) {
     const c = byId.get(r.id);
-    if (r.verdict === "fail" && c?.scope === "other" && r.actual_status === 200) leaked.add(c.action);
+    if (r.verdict === "fail" && c?.scope === "other" && r.actual_status === 200) leakedActions.add(c.action);
   }
-  if (leaked.size === 0) return `${run.failCount + run.errorCount} checks did not match the approved expectations.`;
-  const actions = [...leaked].join(" and ");
+  if (leakedActions.size === 0) return `${run.failCount + run.errorCount} checks did not match the approved expectations.`;
+  const actions = [...leakedActions].join(" and ");
   return `Cross-tenant ${actions} returned asset data when access should have been denied.`;
 }
 
-function CiHint({ plan }: { plan: Plan }) {
+// Bypass attempts that got in (or were inconclusive) are listed in full; held
+// ones fold away, since a healthy API refuses dozens of them.
+function BypassSection({
+  run,
+  plan,
+  bypassOn,
+  onSelect,
+  selectedId,
+}: {
+  run: Run;
+  plan: Plan;
+  bypassOn: boolean;
+  onSelect: (id: string) => void;
+  selectedId: string | null;
+}) {
+  if (!run.bypass) {
+    if (!bypassOn) return null;
+    return (
+      <p className="mt-4 text-sm text-ink-faint" data-verify-reveal>
+        This run did not try bypass variants. Run again to include them.
+      </p>
+    );
+  }
+  const byId = new Map(plan.cases.map((c) => [c.id, c]));
+  const open = [
+    ...run.variants.filter((v) => v.verdict === "fail"),
+    ...run.variants.filter((v) => v.verdict === "error"),
+  ];
+  const held = run.variants.filter((v) => v.verdict === "pass");
+  const { leaked, inconclusive } = run.bypass;
+
+  const row = (r: CheckResult) => {
+    const c = byId.get(r.variant!.of);
+    const headers = Object.entries(r.headers ?? {});
+    return (
+      <li
+        key={r.id}
+        className={clsx(
+          "flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 text-sm",
+          r.verdict === "fail" && "border-l-2 border-l-fail",
+          selectedId === r.id && "bg-panel-elevated"
+        )}
+      >
+        <VariantBadge verdict={r.verdict} />
+        <div className="min-w-0 flex-1">
+          <div className="text-ink">
+            {r.variant!.label}
+            {c && (
+              <span className="text-ink-muted">
+                {" "}· {ROLE_LABEL[c.role]} {ACTION_LABEL[c.action].toLowerCase()}, {SCOPE_LABEL[c.scope].toLowerCase()}
+              </span>
+            )}
+          </div>
+          <div className="mt-0.5 truncate font-mono-tnum text-xs text-ink-faint">
+            {r.method} {r.path}
+            {headers.map(([k, v]) => ` · ${k}: ${v}`).join("")}
+            {r.actual_status ? ` → ${r.actual_status}` : ""}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => onSelect(r.id)}
+          className={clsx(
+            "flex items-center gap-1 rounded-md px-2.5 py-1 text-xs",
+            r.verdict === "fail"
+              ? "border border-fail/30 bg-fail/5 font-medium text-fail hover:bg-fail/10"
+              : "text-ink-faint hover:text-ink"
+          )}
+        >
+          {r.verdict === "fail" && <Search size={12} />}
+          {r.verdict === "fail" ? "Inspect" : "Details"}
+        </button>
+      </li>
+    );
+  };
+
+  return (
+    <section data-verify-reveal className="mt-8">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="flex items-center gap-2 text-sm font-medium text-ink">
+          <DoorOpen size={16} className={leaked > 0 ? "text-fail" : "text-brand"} /> Bypass attempts
+        </h2>
+        <span className="font-mono-tnum text-xs text-ink-faint">
+          {run.variants.length} tried · {held.length} held · {leaked} leaked
+          {inconclusive > 0 && ` · ${inconclusive} inconclusive`} · catalog {run.bypass.catalog}
+        </span>
+      </div>
+      <p className="mt-1.5 text-sm text-ink-muted">
+        Every check that expects a deny, sent again in shapes that often slip past an access check. A refusal (401,
+        403, 404, 405) holds; any 2xx is a leak.
+      </p>
+      <div className="mt-3 overflow-hidden rounded-lg border border-border">
+        {open.length > 0 ? (
+          <ul className="divide-y divide-border bg-panel">{open.map(row)}</ul>
+        ) : (
+          <p className="flex items-center gap-2 bg-panel px-4 py-3 text-sm text-pass">
+            <CheckCircle2 size={15} /> All {held.length} attempts were refused.
+          </p>
+        )}
+        {held.length > 0 && (
+          <details className="group border-t border-border">
+            <summary className="cursor-pointer list-none px-4 py-2.5 text-xs text-ink-faint hover:text-ink">
+              <span className="group-open:hidden">Show {held.length} held attempts</span>
+              <span className="hidden group-open:inline">Hide held attempts</span>
+            </summary>
+            <ul className="divide-y divide-border border-t border-border">{held.map(row)}</ul>
+          </details>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function VariantBadge({ verdict }: { verdict: string }) {
+  if (verdict === "pass")
+    return (
+      <Badge tone="pass">
+        <CheckCircle2 size={11} /> Held
+      </Badge>
+    );
+  if (verdict === "fail")
+    return (
+      <Badge tone="fail">
+        <DoorOpen size={11} /> Leaked
+      </Badge>
+    );
+  return (
+    <Badge tone="attn">
+      <Ban size={11} /> Inconclusive
+    </Badge>
+  );
+}
+
+function CiHint({ plan, bypass }: { plan: Plan; bypass: boolean }) {
+  const flags = bypass ? "-fixture fixed -bypass" : "-fixture fixed";
   const commands = [
-    `go run ./cmd/ruleproof-ci -bundle ruleproof-plan-${plan.id}.json -fixture fixed`,
-    `go run ./cmd/ruleproof-ci -server http://localhost:8080 -plan ${plan.id} -fixture fixed`,
+    `go run ./cmd/ruleproof-ci -bundle ruleproof-plan-${plan.id}.json ${flags}`,
+    `go run ./cmd/ruleproof-ci -server http://localhost:8080 -plan ${plan.id} ${flags}`,
   ];
   return (
     <section data-verify-reveal className="mt-8 rounded-xl border border-border bg-panel p-5">

@@ -17,14 +17,15 @@ jobs:
       - name: Go tests
         run: go test ./...
 
-      # The approved plan must hold against the corrected API. Any mismatch
-      # fails this step and shows up as annotations plus a job summary.
+      # The approved plan must hold against the corrected API, including every
+      # bypass variant. Any mismatch fails this step and shows up as
+      # annotations plus a job summary.
       - name: Enforce approved access rules
-        run: go run ./cmd/ruleproof-ci -bundle examples/tenant-isolation.bundle.json -fixture fixed -junit ruleproof-junit.xml
+        run: go run ./cmd/ruleproof-ci -bundle examples/tenant-isolation.bundle.json -fixture fixed -bypass -junit ruleproof-junit.xml
 
       # The revision that closes the export coverage gap must hold too.
       - name: Enforce approved access rules (with export)
-        run: go run ./cmd/ruleproof-ci -bundle examples/tenant-isolation-export.bundle.json -fixture fixed -junit ruleproof-export-junit.xml
+        run: go run ./cmd/ruleproof-ci -bundle examples/tenant-isolation-export.bundle.json -fixture fixed -bypass -junit ruleproof-export-junit.xml
 
       # Proves the gate has teeth: the same plans must fail on the seeded defect.
       - name: Seeded defect is caught
@@ -37,6 +38,18 @@ jobs:
             fi
             cat broken.txt
           done
+
+      # Proves bypass variants earn their place: the partial fix passes every
+      # approved check, so only -bypass can catch it.
+      - name: Partial fix is caught only by bypass variants
+        run: |
+          bundle=examples/tenant-isolation-export.bundle.json
+          env -u GITHUB_ACTIONS -u GITHUB_STEP_SUMMARY go run ./cmd/ruleproof-ci -bundle $bundle -fixture partial
+          if env -u GITHUB_ACTIONS -u GITHUB_STEP_SUMMARY go run ./cmd/ruleproof-ci -bundle $bundle -fixture partial -bypass > partial.txt; then
+            echo "::error::Bypass variants did not catch the partial fix"
+            exit 1
+          fi
+          cat partial.txt
 
       - name: Upload JUnit report
         if: always()

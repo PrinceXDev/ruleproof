@@ -23,18 +23,17 @@ import (
 // in practice.
 const maxRequestBodyBytes = 1 << 20
 
-// Server holds the base URLs of the two fixture instances this demo can run
-// checks against. Both are synthetic and started locally — never an
-// arbitrary user-supplied target.
+// Server holds the base URLs of the fixture instances this demo can run
+// checks against, keyed by fixture name ("broken", "partial", "fixed"). All
+// are synthetic and started locally — never an arbitrary user-supplied target.
 type Server struct {
-	BrokenURL     string
-	FixedURL      string
+	Fixtures      map[string]string
 	Store         *store.Store
 	AllowedOrigin string // CORS origin; "*" is fine for this local demo, tighten before any real deployment
 }
 
-func New(st *store.Store, brokenURL, fixedURL string) *Server {
-	return &Server{Store: st, BrokenURL: brokenURL, FixedURL: fixedURL, AllowedOrigin: "*"}
+func New(st *store.Store, fixtures map[string]string) *Server {
+	return &Server{Store: st, Fixtures: fixtures, AllowedOrigin: "*"}
 }
 
 func (s *Server) Routes() http.Handler {
@@ -117,15 +116,32 @@ type runResponse struct {
 	PassCount  int            `json:"passCount"`
 	FailCount  int            `json:"failCount"`
 	ErrorCount int            `json:"errorCount"`
+	Variants   []check.Result `json:"variants"`
+	Bypass     *bypassSummary `json:"bypass,omitempty"` // nil when the run did not try bypass variants
 	CreatedAt  time.Time      `json:"createdAt"`
 }
 
+type bypassSummary struct {
+	Catalog      string `json:"catalog"`
+	Held         int    `json:"held"`
+	Leaked       int    `json:"leaked"`
+	Inconclusive int    `json:"inconclusive"`
+}
+
 func toRunResponse(r *store.Run) runResponse {
-	return runResponse{
+	resp := runResponse{
 		ID: r.ID, PlanID: r.PlanID, PlanHash: r.PlanHash, Fixture: r.Fixture,
 		Results: r.Results, PassCount: r.PassCount, FailCount: r.FailCount, ErrorCount: r.ErrorCount,
-		CreatedAt: r.CreatedAt,
+		Variants: r.Variants, CreatedAt: r.CreatedAt,
 	}
+	if resp.Variants == nil {
+		resp.Variants = []check.Result{}
+	}
+	if r.BypassCatalog != "" {
+		held, leaked, inconclusive := check.Tally(r.Variants)
+		resp.Bypass = &bypassSummary{Catalog: r.BypassCatalog, Held: held, Leaked: leaked, Inconclusive: inconclusive}
+	}
+	return resp
 }
 
 // --- plans ---
@@ -310,25 +326,21 @@ func (s *Server) handleCreateRun(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		PlanID  string `json:"planId"`
 		Fixture string `json:"fixture"`
+		Bypass  bool   `json:"bypass"`
 	}
 	if err := decodeJSON(w, r, &body); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid JSON body")
 		return
 	}
-	var base string
-	switch body.Fixture {
-	case "broken":
-		base = s.BrokenURL
-	case "fixed":
-		base = s.FixedURL
-	default:
-		writeError(w, http.StatusBadRequest, "fixture must be \"broken\" or \"fixed\"")
+	base, ok := s.Fixtures[body.Fixture]
+	if !ok || base == "" {
+		writeError(w, http.StatusBadRequest, "fixture must be \"broken\", \"partial\" or \"fixed\"")
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
-	run, err := s.Store.RunPlan(ctx, body.PlanID, body.Fixture, base)
+	run, err := s.Store.RunPlan(ctx, body.PlanID, body.Fixture, base, store.RunOptions{Bypass: body.Bypass})
 	if !writeStoreErr(w, err) {
 		return
 	}

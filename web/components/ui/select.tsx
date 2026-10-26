@@ -68,7 +68,7 @@ export function SelectItem({
   return (
     <SelectPrimitive.Item
       className={clsx(
-        "relative flex min-h-11 cursor-default items-center rounded-md py-2 pl-3 pr-9 text-sm outline-none select-none data-[highlighted]:bg-brand/15 data-[highlighted]:text-brand data-[state=checked]:text-brand data-[disabled]:pointer-events-none data-[disabled]:opacity-40",
+        "relative flex min-h-11 cursor-pointer items-center rounded-md py-2 pl-3 pr-9 text-sm outline-none select-none data-[highlighted]:bg-brand/15 data-[highlighted]:text-brand data-[state=checked]:text-brand data-[disabled]:pointer-events-none data-[disabled]:opacity-40",
         className,
       )}
       {...props}
