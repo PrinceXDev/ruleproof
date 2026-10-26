@@ -17,7 +17,7 @@ Speak an access rule in plain language, approve the exact checks it produces, th
 
 <img src="docs/media/hero-console.gif" width="640" alt="Animated sample: a rule becomes eight checks and two cross-tenant reads fail" />
 
-[Quickstart](#get-started) · [How it works](#how-it-works) · [Screenshots](#explore-the-product) · [Revision diff](#revision-diff) · [CI gate](#ci-gate) · [API](#api) · [Architecture](#architecture) · [Scope](#scope-and-limits)
+[Quickstart](#get-started) · [How it works](#how-it-works) · [Screenshots](#explore-the-product) · [Endpoint coverage](#endpoint-coverage) · [Revision diff](#revision-diff) · [CI gate](#ci-gate) · [API](#api) · [Architecture](#architecture) · [Scope](#scope-and-limits)
 
 </div>
 
@@ -38,6 +38,7 @@ Broken access control is the #1 risk in the OWASP Top 10, and it hides in plain 
 | ✅ | **Approve the exact revision** | Plans are immutable. Any edit creates a new revision, and the old approval does not carry over. |
 | 🎯 | **Exact status matching** | Want 403, got 500? That's a failure. Crashes and redirects never pass as a "deny". |
 | 🔍 | **Evidence inspector** | Rule excerpt → expectation → request (redacted headers) → response body, plus a plain-language explanation. |
+| 🗺️ | **Endpoint coverage** | Maps the rule onto the API's OpenAPI spec and flags object-level endpoints it never mentions, with a sentence that closes the gap. |
 | 🔀 | **Revision diff** | Before re-approving, see word-level rule edits, every flipped expectation, new or resolved assumptions, and whether an old approval was reset. |
 | 🚦 | **CI gate** | `ruleproof-ci` re-runs an approved plan on every push and fails the build on any mismatch. Refuses unapproved or edited plans. |
 | 🕓 | **Run history and replay** | Every run is stored against the revision it tested. Compare seeded-defect vs corrected side by side. |
@@ -51,11 +52,33 @@ Broken access control is the #1 risk in the OWASP Top 10, and it hides in plain 
 </div>
 
 1. **Explain** — describe who can do what. The parser extracts concepts and flags anything it can't resolve.
-2. **Review and approve** — inspect the 8 proposed checks, edit any expected outcome, acknowledge assumptions, approve.
+2. **Review and approve** — see which API endpoints the rule covers, inspect the 8 proposed checks, edit any expected outcome, acknowledge assumptions, approve.
 3. **Run** — send the approved requests to the *seeded-defect* or *corrected* fixture API.
 4. **Inspect** — open any result to trace it from the rule sentence to the raw response.
 
 With the sample rule, the seeded-defect API returns **6 passed, 2 failed** (both cross-tenant reads leak data). The same approved plan against the corrected API returns **8 passed**.
+
+## Endpoint coverage
+
+Access bugs rarely live on the endpoint everyone is looking at. They live on the one nobody wrote a rule for. On the Review step, RuleProof reads the target API's OpenAPI spec and maps the rule onto every object-level operation (a path with an ID in it):
+
+```
+API coverage · 2 of 3 endpoints
+  GET  /assets/{id}          4 checks   "Viewers can read assets in their own tenant."
+  PUT  /assets/{id}          4 checks   "Editors can also update them."
+  GET  /assets/{id}/export   no rule    → "Both roles can export assets in their own tenant.
+                                           Neither role can export another tenant's assets."
+```
+
+**Add to rule** appends the suggested sentence and puts the cursor at the end of the rule, so you can generate as-is or dictate your own wording. The new revision has 12 checks, and the seeded-defect API now fails 4 of them: cross-tenant reads **and** cross-tenant exports, with the leaked CSV as evidence. The corrected API passes all 12.
+
+- The action comes from the path's last literal segment (`/export`), or from the HTTP method (`GET` read, `PUT`/`PATCH` update).
+- Actions outside the parser's vocabulary are still listed as gaps, marked as not testable yet, rather than silently ignored.
+- Coverage uses the spec bundled with the fixture (`GET /api/fixtures/openapi.json`). Bringing your own spec is not supported yet.
+
+```sh
+curl localhost:8080/api/plans/<revision id>/coverage
+```
 
 ## Revision diff
 
@@ -182,7 +205,7 @@ DATABASE_URL=postgres://user:password@localhost:5432/ruleproof go run ./cmd/serv
 ### Tests
 
 ```sh
-go test ./...               # backend: store, api, rules, assets, check, diff, ci
+go test ./...               # backend: store, api, rules, assets, check, diff, coverage, ci
 cd web && npx tsc --noEmit  # frontend typecheck
 cd web && npx eslint .      # frontend lint
 ```
@@ -198,22 +221,24 @@ cmd/server (Go)
    ├── internal/rules   bounded, sentence-scoped rule parser
    ├── internal/store   immutable plans + runs (SQLite or Postgres via sqlx)
    ├── internal/diff    revision diff: wording, expectations, assumptions
+   ├── internal/coverage  rule → OpenAPI endpoint coverage and gaps
    └── internal/check   HTTP runner: per-request timeouts, exact status match
           │
           ▼
 internal/assets — synthetic asset API, started twice:
-   ├── seeded defect  skips the cross-tenant ownership check on reads
+   ├── seeded defect  skips the cross-tenant ownership check on reads and exports
    └── corrected      checks tenant ownership on every request
 ```
 
 | Package | Responsibility |
 |---|---|
-| `internal/rules` | Turns reviewed text into an 8-case plan using a fixed vocabulary. Out-of-vocabulary wording becomes an assumption; every concept keeps its source sentence. |
-| `internal/assets` | Project/tenant-scoped asset API with `fixed` and `broken` modes, so a UI-hidden action can still be bypassed at the API. |
+| `internal/rules` | Turns reviewed text into an 8-case plan (12 when the rule mentions export) using a fixed vocabulary. Out-of-vocabulary wording becomes an assumption; every concept keeps its source sentence. |
+| `internal/assets` | Project/tenant-scoped asset API (read, update, export) with its OpenAPI spec and `fixed` and `broken` modes, so a UI-hidden action can still be bypassed at the API. |
 | `internal/check` | Issues approved requests with timeouts and exact status matching, and captures the synthetic response body. Credentials are never captured. |
 | `internal/store` | Immutable plans linked into a lineage; runs replayable across the revision history. |
 | `internal/api` | explain → revise → edit → acknowledge → approve → run → history → export. |
 | `internal/diff` | Compares two revisions: phrase-level wording diff, changed/added/removed cases, assumptions and concepts, approval reset. |
+| `internal/coverage` | Maps a plan onto an OpenAPI spec: covered object-level operations with their source sentence, and uncovered ones with a suggested sentence. |
 | `cmd/ruleproof-ci` | CI gate: verifies an approved, untampered plan, runs it, fails the build on any mismatch. |
 | `cmd/ruleproof` | The original standalone CLI demo (invoice-tenant fixture), Go only. |
 
@@ -234,6 +259,8 @@ internal/assets — synthetic asset API, started twice:
 | `GET` | `/api/runs/{id}` | Fetch a run with evidence |
 | `GET` | `/api/plans/{id}/history` | Full lineage and every run |
 | `GET` | `/api/plans/{id}/diff` | What changed vs. the parent, or `?base=<id>` |
+| `GET` | `/api/plans/{id}/coverage` | Which spec endpoints the plan covers, and suggested sentences for the gaps |
+| `GET` | `/api/fixtures/openapi.json` | The fixture's OpenAPI spec |
 | `GET` | `/api/plans/{id}/export` | Download the evidence bundle |
 
 ```sh
@@ -260,14 +287,14 @@ A passing matrix means **the approved scenarios passed**. It does not prove the 
 ## Two-minute demo outline
 
 1. Explain the recurring problem: checking who can actually access what, beyond what the UI shows.
-2. Dictate the rule, review the generated matrix, approve it.
-3. Run against the seeded-defect fixture — reveal the cross-tenant read leak with evidence.
-4. Switch to the corrected fixture with the same approved plan — all eight cases pass.
+2. Dictate the rule. Review shows 8 checks, and coverage flags `GET /assets/{id}/export`: the rule never mentions it.
+3. Add the sentence (or dictate your own), approve the 12-check revision, and run it against the seeded defect. Cross-tenant reads **and** the forgotten export leak, with the CSV as evidence.
+4. Switch to the corrected fixture with the same approved plan: all 12 checks pass.
 5. Show genuine Wispr build usage and the Insights usage card.
 
 ## How this was built with Wispr Flow
 
-<!-- Fill with real examples only. Judges score Wispr usage at 30%. -->
+<!-- Fill with real examples only. "Was Wispr used meaningfully?" is one of four weighted judging questions. -->
 
 - **Specs:** _e.g. the product contract above was dictated, then edited._
 - **Prompts:** _e.g. coding-agent prompts dictated for the parser, runner, and evidence drawer._

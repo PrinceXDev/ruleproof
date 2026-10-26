@@ -9,7 +9,7 @@ import CopyButton from "./landing/CopyButton";
 import { useGSAP, gsap } from "@/lib/gsap";
 
 const ROLE_LABEL: Record<string, string> = { viewer: "Viewer", editor: "Editor" };
-const ACTION_LABEL: Record<string, string> = { read: "Read", update: "Update" };
+const ACTION_LABEL: Record<string, string> = { read: "Read", update: "Update", export: "Export" };
 const SCOPE_LABEL: Record<string, string> = { own: "Own tenant", other: "Other tenant" };
 
 type RowState = "queued" | "running" | "pass" | "fail" | "error" | "cancelled";
@@ -179,11 +179,7 @@ export default function VerifyScreen({
 
       {run && (
         <p className="mt-2 text-sm text-ink-muted" data-verify-reveal>
-          {fixture === "broken"
-            ? run.failCount > 0
-              ? "Cross-tenant read returned asset data when access should have been denied."
-              : "No failures observed this run."
-            : "Cross-tenant read now returns 403. All approved checks passed."}
+          {runSummary(run, plan)}
         </p>
       )}
 
@@ -287,6 +283,21 @@ export default function VerifyScreen({
 
 // Points from a one-off run to keeping the rule enforced: the exported
 // bundle is exactly what cmd/ruleproof-ci verifies and re-runs.
+// Names the actions that actually leaked, so a plan that also tests export
+// doesn't report every failure as a "read".
+function runSummary(run: Run, plan: Plan): string {
+  if (run.failCount + run.errorCount === 0) return "Cross-tenant access returns 403. All approved checks passed.";
+  const byId = new Map(plan.cases.map((c) => [c.id, c]));
+  const leaked = new Set<string>();
+  for (const r of run.results) {
+    const c = byId.get(r.id);
+    if (r.verdict === "fail" && c?.scope === "other" && r.actual_status === 200) leaked.add(c.action);
+  }
+  if (leaked.size === 0) return `${run.failCount + run.errorCount} checks did not match the approved expectations.`;
+  const actions = [...leaked].join(" and ");
+  return `Cross-tenant ${actions} returned asset data when access should have been denied.`;
+}
+
 function CiHint({ plan }: { plan: Plan }) {
   const commands = [
     `go run ./cmd/ruleproof-ci -bundle ruleproof-plan-${plan.id}.json -fixture fixed`,

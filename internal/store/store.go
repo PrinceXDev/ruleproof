@@ -474,7 +474,7 @@ func (s *Store) RunPlan(ctx context.Context, planID, fixture, baseURL string) (*
 	for _, c := range p.Cases {
 		cases = append(cases, check.Case{
 			ID: c.ID, Rule: p.RuleText, Actor: c.Actor, Method: c.Method,
-			Path: "/assets/" + c.AssetID, Token: c.Token, Want: c.Want,
+			Path: rules.CasePath(c), Token: c.Token, Want: c.Want,
 		})
 	}
 	results := check.Run(ctx, baseURL, cases)

@@ -9,7 +9,9 @@ import (
 	"net/http"
 	"time"
 
+	"ruleproof/internal/assets"
 	"ruleproof/internal/check"
+	"ruleproof/internal/coverage"
 	"ruleproof/internal/diff"
 	"ruleproof/internal/rules"
 	"ruleproof/internal/store"
@@ -43,6 +45,8 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /api/plans/{id}/history", s.handleHistory)
 	mux.HandleFunc("GET /api/plans/{id}/export", s.handleExport)
 	mux.HandleFunc("GET /api/plans/{id}/diff", s.handleDiff)
+	mux.HandleFunc("GET /api/plans/{id}/coverage", s.handleCoverage)
+	mux.HandleFunc("GET /api/fixtures/openapi.json", s.handleOpenAPI)
 	mux.HandleFunc("POST /api/plans/{id}/revise", s.handleRevise)
 	mux.HandleFunc("PATCH /api/plans/{id}/cases", s.handleEditCases)
 	mux.HandleFunc("POST /api/plans/{id}/acknowledge", s.handleAcknowledge)
@@ -274,6 +278,26 @@ func (s *Server) handleDiff(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, diff.Compare(toDiffSide(base), toDiffSide(head)))
+}
+
+// handleCoverage maps a plan onto the fixture's OpenAPI spec. Both fixtures
+// share one spec, so there is nothing to choose here.
+func (s *Server) handleCoverage(w http.ResponseWriter, r *http.Request) {
+	p, err := s.Store.GetPlan(r.Context(), r.PathValue("id"))
+	if !writeStoreErr(w, err) {
+		return
+	}
+	report, err := coverage.Analyze(assets.OpenAPISpec, p.Cases, p.RuleText)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal error")
+		return
+	}
+	writeJSON(w, http.StatusOK, report)
+}
+
+func (s *Server) handleOpenAPI(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write(assets.OpenAPISpec)
 }
 
 func toDiffSide(p *store.Plan) diff.Side {

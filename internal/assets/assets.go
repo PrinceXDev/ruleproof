@@ -2,7 +2,17 @@
 // Tokens are public demo labels, not real credentials.
 package assets
 
-import "net/http"
+import (
+	_ "embed"
+	"net/http"
+	"strings"
+)
+
+// OpenAPISpec describes the fixture's endpoints. RuleProof maps approved rules
+// onto it to find object-level endpoints no rule covers.
+//
+//go:embed openapi.json
+var OpenAPISpec []byte
 
 type identity struct {
 	Tenant string
@@ -20,13 +30,16 @@ var owners = map[string]string{
 	"b1": "B",
 }
 
-// Handler serves GET (read) and PUT (update) on /assets/{id}.
-// When broken is true, the cross-tenant ownership check on reads is skipped —
-// the seeded defect this demo is built to expose. The role check (viewers
-// cannot update) is always enforced, so some cells still pass even when broken.
+// Handler serves GET (read) and PUT (update) on /assets/{id}, and GET
+// (export) on /assets/{id}/export.
+// When broken is true, the cross-tenant ownership check on GETs (read and
+// export) is skipped — the seeded defect this demo is built to expose. The
+// role check (viewers cannot update) is always enforced, so some cells still
+// pass even when broken.
 func Handler(broken bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet && r.Method != http.MethodPut {
+		assetID, export := strings.CutSuffix(strings.TrimPrefix(r.URL.Path, "/assets/"), "/export")
+		if r.Method != http.MethodGet && (export || r.Method != http.MethodPut) {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
@@ -35,7 +48,6 @@ func Handler(broken bool) http.Handler {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
-		assetID := r.URL.Path[len("/assets/"):]
 		owner, ok := owners[assetID]
 		if !ok {
 			w.WriteHeader(http.StatusNotFound)
@@ -52,6 +64,10 @@ func Handler(broken bool) http.Handler {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
+		if export {
+			_, _ = w.Write([]byte(`{"export":"` + assetID + `.csv","tenant":"` + owner + `","rows":["id,name,owner","` + assetID + `,Synthetic asset,tenant ` + owner + `"]}`))
+			return
+		}
 		_, _ = w.Write([]byte(`{"asset":"` + assetID + `","tenant":"` + owner + `"}`))
 	})
 }

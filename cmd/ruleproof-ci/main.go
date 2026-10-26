@@ -121,7 +121,7 @@ func run(args []string, stdout, stderr io.Writer, getenv func(string) string) in
 		}
 		cases = append(cases, check.Case{
 			ID: c.ID, Rule: b.Plan.RuleText, Actor: c.Actor, Method: c.Method,
-			Path: "/assets/" + c.AssetID, Token: token, Want: c.Want,
+			Path: rules.CasePath(c), Token: token, Want: c.Want,
 		})
 	}
 
@@ -219,6 +219,10 @@ func describe(c rules.Case) string {
 func printTable(w io.Writer, b *bundle, label string, results []check.Result, byID map[string]rules.Case) {
 	fmt.Fprintf(w, "RuleProof CI · plan %s · hash %s · %s\n", b.Plan.ID, b.Plan.Hash, label)
 	fmt.Fprintf(w, "Rule: %q\n\n", b.Plan.RuleText)
+	pathWidth := 12
+	for _, r := range results {
+		pathWidth = max(pathWidth, len(r.Path))
+	}
 	var pass, failed, errored int
 	for _, r := range results {
 		status := "-"
@@ -226,7 +230,7 @@ func printTable(w io.Writer, b *bundle, label string, results []check.Result, by
 			status = fmt.Sprint(r.Actual)
 		}
 		mark := map[string]string{"pass": "PASS ", "fail": "FAIL ", "error": "ERROR"}[r.Verdict]
-		fmt.Fprintf(w, "  %s  %-26s %-4s %-12s want %d  got %s\n", mark, describe(byID[r.ID]), r.Method, r.Path, r.Want, status)
+		fmt.Fprintf(w, "  %s  %-26s %-4s %-*s want %d  got %s\n", mark, describe(byID[r.ID]), r.Method, pathWidth, r.Path, r.Want, status)
 		switch r.Verdict {
 		case "pass":
 			pass++

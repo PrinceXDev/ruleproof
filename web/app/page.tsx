@@ -15,6 +15,7 @@ import {
   Lock,
   Mic,
   Quote,
+  Radar,
   ScanSearch,
   ShieldAlert,
   ShieldCheck,
@@ -75,6 +76,7 @@ const pipeline = [
   "Source provenance",
   "Visible assumptions",
   "8-case plan",
+  "Endpoint coverage",
   "Human approval",
   "Immutable revisions",
   "Exact-status runner",
@@ -94,8 +96,8 @@ const steps = [
   {
     n: "02",
     title: "Review the exact plan",
-    body: "Eight explicit scenarios with expected HTTP statuses. Override any expectation, acknowledge assumptions, then approve that specific revision.",
-    detail: ["Edit → new revision", "Approval never carries over"],
+    body: "Eight explicit scenarios with expected HTTP statuses, plus a map of which API endpoints the rule covers. Override any expectation, acknowledge assumptions, then approve that specific revision.",
+    detail: ["Endpoint gaps flagged", "Approval never carries over"],
     icon: FileSearch,
   },
   {
@@ -125,6 +127,7 @@ const endpoints = [
   ["GET", "/api/runs/{id}", "Fetch a run with evidence"],
   ["GET", "/api/plans/{id}/history", "Full lineage + every run"],
   ["GET", "/api/plans/{id}/diff", "What changed vs. the previous revision"],
+  ["GET", "/api/plans/{id}/coverage", "Endpoints the rule covers, and the gaps"],
   ["GET", "/api/plans/{id}/export", "Download the evidence bundle"],
 ];
 
@@ -472,6 +475,30 @@ export default function Home() {
               title="Assumptions, never guesses"
               body="Wording outside the vocabulary becomes a visible assumption. Approval is blocked until a human acknowledges it."
             />
+            <Feature
+              className="md:col-span-6"
+              icon={Radar}
+              title="The endpoint you forgot"
+              body="RuleProof maps your rule onto the API’s OpenAPI spec and flags every object-level endpoint the rule never mentions. Add one sentence and the new checks catch the leak nobody was looking for."
+            >
+              <div className="mt-6 divide-y divide-white/[.06] rounded-xl border border-white/[.07] bg-black/30 font-mono text-[11.5px]">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5">
+                  <span className="w-9 text-ink-faint">GET</span>
+                  <span className="text-ink">/assets/{"{id}"}</span>
+                  <span className="ml-auto text-pass">4 checks</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5">
+                  <span className="w-9 text-ink-faint">PUT</span>
+                  <span className="text-ink">/assets/{"{id}"}</span>
+                  <span className="ml-auto text-pass">4 checks</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5">
+                  <span className="w-9 text-ink-faint">GET</span>
+                  <span className="text-ink">/assets/{"{id}"}/export</span>
+                  <span className="ml-auto text-attn">no rule → cross-tenant export leaks</span>
+                </div>
+              </div>
+            </Feature>
             <Feature
               className="md:col-span-2"
               icon={GitBranch}

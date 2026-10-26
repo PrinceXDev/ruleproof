@@ -274,3 +274,43 @@ func TestDiffEndpoint(t *testing.T) {
 		t.Fatalf("cross-lineage diff: status %d, want 400", resp.StatusCode)
 	}
 }
+
+// TestCoverageGapToLeak walks the demo story: the sample rule leaves export
+// uncovered, the suggested sentence closes the gap, and the new checks catch
+// the seeded cross-tenant export leak.
+func TestCoverageGapToLeak(t *testing.T) {
+	env := newTestEnv(t)
+	_, plan := env.do(t, http.MethodPost, "/api/plans", map[string]string{"text": sampleRule})
+	planID := plan["id"].(string)
+
+	resp, cov := env.do(t, http.MethodGet, "/api/plans/"+planID+"/coverage", nil)
+	if resp.StatusCode != http.StatusOK || cov["covered"] != 2.0 || cov["total"] != 3.0 {
+		t.Fatalf("coverage: want 2 of 3, got %d %v", resp.StatusCode, cov)
+	}
+	var suggestion string
+	for _, op := range cov["operations"].([]any) {
+		if o := op.(map[string]any); o["covered"] == false {
+			suggestion = o["suggestion"].(string)
+		}
+	}
+
+	_, revised := env.do(t, http.MethodPost, "/api/plans/"+planID+"/revise", map[string]string{"text": sampleRule + " " + suggestion})
+	revisedID := revised["id"].(string)
+	if n := len(revised["cases"].([]any)); n != 12 {
+		t.Fatalf("revised plan: want 12 cases, got %d", n)
+	}
+	_, cov = env.do(t, http.MethodGet, "/api/plans/"+revisedID+"/coverage", nil)
+	if cov["covered"] != 3.0 {
+		t.Fatalf("revised coverage: want 3 of 3, got %v", cov["covered"])
+	}
+
+	env.do(t, http.MethodPost, "/api/plans/"+revisedID+"/approve", nil)
+	_, broken := env.do(t, http.MethodPost, "/api/runs", map[string]string{"planId": revisedID, "fixture": "broken"})
+	if broken["failCount"] != 4.0 {
+		t.Fatalf("seeded defect: want 4 failures (2 reads, 2 exports), got %v", broken["failCount"])
+	}
+	_, fixed := env.do(t, http.MethodPost, "/api/runs", map[string]string{"planId": revisedID, "fixture": "fixed"})
+	if fixed["passCount"] != 12.0 {
+		t.Fatalf("corrected: want 12 passed, got %v", fixed["passCount"])
+	}
+}

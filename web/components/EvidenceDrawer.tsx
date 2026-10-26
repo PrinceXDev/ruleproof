@@ -10,7 +10,7 @@ import { useDialog } from "@/lib/useDialog";
 import { useGSAP, gsap } from "@/lib/gsap";
 
 const ROLE_LABEL: Record<string, string> = { viewer: "Viewer", editor: "Editor" };
-const ACTION_LABEL: Record<string, string> = { read: "Read", update: "Update" };
+const ACTION_LABEL: Record<string, string> = { read: "Read", update: "Update", export: "Export" };
 const SCOPE_LABEL: Record<string, string> = { own: "own tenant", other: "another tenant" };
 
 export default function EvidenceDrawer({

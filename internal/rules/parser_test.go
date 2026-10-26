@@ -70,3 +70,42 @@ func TestConceptsCarryProvenanceSnippet(t *testing.T) {
 		}
 	}
 }
+
+func TestParseExportCasesOnlyWhenMentioned(t *testing.T) {
+	rule := sampleRule + " Both roles can export assets in their own tenant. Neither role can export another tenant's assets."
+	plan := rules.Parse(rule)
+	if len(plan.Cases) != 12 {
+		t.Fatalf("expected 12 cases with export, got %d", len(plan.Cases))
+	}
+	if len(plan.Assumptions) != 0 {
+		t.Fatalf("expected no assumptions, got %v", plan.Assumptions)
+	}
+	for _, c := range plan.Cases {
+		if c.Action != "export" {
+			continue
+		}
+		want := 200
+		if c.Scope == "other" {
+			want = 403
+		}
+		if c.Want != want || c.Method != "GET" || rules.CasePath(c) != "/assets/"+c.AssetID+"/export" {
+			t.Errorf("case %s: got %s %s want %d", c.ID, c.Method, rules.CasePath(c), c.Want)
+		}
+	}
+}
+
+func TestParseExportOwnTenantAssumedWhenUnstated(t *testing.T) {
+	plan := rules.Parse(sampleRule + " Viewers cannot export assets. Nobody can download another tenant's assets.")
+	if len(plan.Assumptions) != 1 {
+		t.Fatalf("expected one assumption about editors, got %v", plan.Assumptions)
+	}
+	got := map[string]int{}
+	for _, c := range plan.Cases {
+		if c.Action == "export" && c.Scope == "own" {
+			got[c.Role] = c.Want
+		}
+	}
+	if got["viewer"] != 403 || got["editor"] != 200 {
+		t.Fatalf("own-tenant export: want viewer 403 editor 200, got %v", got)
+	}
+}

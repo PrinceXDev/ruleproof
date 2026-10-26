@@ -147,6 +147,20 @@ export default function Home() {
     setDrawerOpen(false);
   }
 
+  // Back to Explain with the gap's sentence appended and the cursor at the
+  // end, so the user can generate as-is or dictate their own wording.
+  function handleAddSentence(sentence: string) {
+    if (!plan) return;
+    const next = `${plan.ruleText.trim()} ${sentence}`;
+    setText(next);
+    setViewOverride(0);
+    requestAnimationFrame(() => {
+      const input = document.getElementById("rule-input") as HTMLTextAreaElement | null;
+      input?.focus();
+      input?.setSelectionRange(next.length, next.length);
+    });
+  }
+
   async function handleEditCase(caseId: string, want: number) {
     if (!plan) return;
     setErrorMsg(null);
@@ -367,6 +381,7 @@ export default function Home() {
               plan={plan}
               revisionLabel={revisionLabel}
               onEdit={handleEditCase}
+              onAddSentence={handleAddSentence}
               onApprove={handleApprove}
               approving={approving}
               editingPending={editingPending}

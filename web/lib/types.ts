@@ -1,5 +1,5 @@
 export type Role = "viewer" | "editor";
-export type ActionKind = "read" | "update";
+export type ActionKind = "read" | "update" | "export";
 export type Scope = "own" | "other";
 export type ExpectedLabel = "allow" | "deny" | "unauthenticated" | "not found" | "unexpected";
 export type Verdict = "pass" | "fail" | "error";
@@ -108,4 +108,24 @@ export interface PlanDiff {
   conceptsRemoved: Concept[];
   planChanged: boolean;
   approvalReset: boolean;
+}
+
+export interface CoverageOperation {
+  method: string;
+  path: string;
+  operationId?: string;
+  summary?: string;
+  action: string;
+  checks: number;
+  covered: boolean;
+  snippet?: string;
+  supported: boolean;
+  suggestion?: string;
+}
+
+export interface CoverageReport {
+  specTitle: string;
+  operations: CoverageOperation[];
+  covered: number;
+  total: number;
 }
