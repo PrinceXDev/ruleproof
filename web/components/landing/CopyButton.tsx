@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Check, Copy } from "lucide-react";
 
-export default function CopyButton({ text }: { text: string }) {
+const CopyButton = ({ text }: { text: string }) => {
   const [copied, setCopied] = useState(false);
   return (
     <button
@@ -19,4 +19,6 @@ export default function CopyButton({ text }: { text: string }) {
       {copied ? <Check size={14} className="text-pass" /> : <Copy size={14} />}
     </button>
   );
-}
+};
+
+export default CopyButton;

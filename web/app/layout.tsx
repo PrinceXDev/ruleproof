@@ -18,10 +18,10 @@ export const metadata: Metadata = {
     "Speak an access rule, review the test cases it produces, and verify what the API actually enforces.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
-  return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
-      <body>{children}</body>
-    </html>
-  );
-}
+const RootLayout = ({ children }: LayoutProps<"/">) => (
+  <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
+    <body>{children}</body>
+  </html>
+);
+
+export default RootLayout;

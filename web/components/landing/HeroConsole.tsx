@@ -4,26 +4,9 @@ import { useRef } from "react";
 import { Braces, Check, X } from "lucide-react";
 import { gsap, useGSAP } from "@/lib/gsap";
 import { cn } from "@/lib/cn";
+import { HERO_CELLS, SAMPLE_CONCEPTS, SAMPLE_RULE } from "@/constants/landing-demo";
 
-const RULE =
-  "Viewers can read assets in their own tenant. Editors can also update them. Neither role can access another tenant's assets.";
-
-const CONCEPTS = ["viewer", "editor", "read", "update", "own tenant", "other tenant"];
-
-// Same 8 cases and seeded-defect outcomes as the Go fixture: the broken API
-// skips the ownership check on reads only.
-const CELLS = ["viewer", "editor"].flatMap((role) =>
-  ["read", "update"].flatMap((action) =>
-    ["own", "other"].map((scope) => {
-      const expected =
-        scope === "own" && (action === "read" || role === "editor") ? 200 : 403;
-      const actual = action === "read" && scope === "other" ? 200 : expected;
-      return { role, action, scope, expected, actual };
-    }),
-  ),
-);
-
-export default function HeroConsole() {
+const HeroConsole = () => {
   const ref = useRef<HTMLDivElement>(null);
 
   useGSAP(
@@ -85,7 +68,7 @@ export default function HeroConsole() {
             </p>
             <p className="min-h-[3.6em] text-[13px] leading-relaxed text-ink sm:text-sm">
               <span className="text-brand">“</span>
-              {RULE.split("").map((ch, i) => (
+              {SAMPLE_RULE.split("").map((ch, i) => (
                 <span key={i} data-char>
                   {ch}
                 </span>
@@ -93,7 +76,7 @@ export default function HeroConsole() {
               <span className="text-brand">”</span>
             </p>
             <div className="mt-2.5 flex flex-wrap gap-1.5">
-              {CONCEPTS.map((c) => (
+              {SAMPLE_CONCEPTS.map((c) => (
                 <span
                   key={c}
                   data-concept
@@ -114,7 +97,7 @@ export default function HeroConsole() {
               <div data-run-bar className="absolute inset-0 origin-left bg-brand" />
             </div>
             <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
-              {CELLS.map((c, i) => {
+              {HERO_CELLS.map((c, i) => {
                 const fail = c.actual !== c.expected;
                 return (
                   <div
@@ -176,4 +159,6 @@ export default function HeroConsole() {
       </figure>
     </div>
   );
-}
+};
+
+export default HeroConsole;

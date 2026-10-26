@@ -188,6 +188,16 @@ curl localhost:8080/api/plans/<revision id>/diff              # vs. its parent
 curl "localhost:8080/api/plans/<revision id>/diff?base=<id>"  # vs. any revision of the same rule
 ```
 
+## Evidence report
+
+Every run has a read-only report page that anyone can open from a link, with no sign-in: the rule, the fixture, the revision, every check with its exact request and captured response, and the bypass attempts. **Share report** on the Verify screen copies the link; each run in Run history has an **Open report** button.
+
+```
+/report/?run=<run id>
+```
+
+The report checks that the run's plan hash matches the approved revision, so the evidence is tied to exactly what was reviewed. **Print / PDF** switches to a light layout and expands every check, ready to attach to a ticket or an audit.
+
 ## CI gate
 
 A rule you checked once can regress tomorrow. Export the approved plan from the studio (**Export JSON**), commit it, and let CI re-run it on every push.
@@ -344,7 +354,7 @@ internal/assets — synthetic asset API, started three times:
 | `internal/bypass` | Derives bypass attempts from an approved plan's deny cases at run time. Versioned catalog; never changes the approved plan. |
 | `internal/check` | Issues approved requests with timeouts and exact status matching, and captures the synthetic response body. Credentials are never captured. |
 | `internal/store` | Immutable plans linked into a lineage; runs (and their bypass attempts) replayable across the revision history. Schema changes are versioned migrations recorded in `schema_migrations`. |
-| `internal/api` | explain → revise → edit → acknowledge → approve → run → history → export. |
+| `internal/api` | explain → revise → edit → acknowledge → approve → run → history → export → report. |
 | `internal/diff` | Compares two revisions: phrase-level wording diff, changed/added/removed cases, assumptions and concepts, approval reset. |
 | `internal/coverage` | Maps a plan onto an OpenAPI spec: covered object-level operations with their source sentence, and uncovered ones with a suggested sentence. |
 | `cmd/ruleproof-ci` | CI gate: verifies an approved, untampered plan, runs it, fails the build on any mismatch. |
@@ -457,7 +467,7 @@ ruleproof/
 | `POST` | `/api/plans/{id}/acknowledge` | Acknowledge parser assumptions |
 | `POST` | `/api/plans/{id}/approve` | Approve this exact revision |
 | `POST` | `/api/runs` | Run an approved plan against `broken`, `partial` or `fixed`; `"bypass": true` adds bypass variants |
-| `GET` | `/api/runs/{id}` | Fetch a run with evidence |
+| `GET` | `/api/runs/{id}` | Fetch a run with evidence (the `/report/?run=<id>` page is built on this) |
 | `GET` | `/api/plans/{id}/history` | Full lineage and every run |
 | `GET` | `/api/plans/{id}/diff` | What changed vs. the parent, or `?base=<id>` |
 | `GET` | `/api/plans/{id}/coverage` | Which spec endpoints the plan covers, and suggested sentences for the gaps |
@@ -515,7 +525,7 @@ The [PR template](.github/pull_request_template.md) carries the product checklis
 2. Dictate the rule. Review shows 8 checks, and coverage flags `GET /assets/{id}/export`: the rule never mentions it.
 3. Add the sentence (or dictate your own), approve the 12-check revision, and run it against the seeded defect. Cross-tenant reads **and** the forgotten export leak, with the CSV as evidence.
 4. Switch to the partial fix: all 12 checks pass — it looks fixed. Turn on bypass variants: 9 attempts leak, including an editor updating another tenant's asset with a spoofed header.
-5. Switch to the corrected fixture with the same approved plan: all 12 checks pass and all 27 bypass attempts are refused.
+5. Switch to the corrected fixture with the same approved plan: all 12 checks pass and all 27 bypass attempts are refused. Click **Share report** and open the link: the same evidence, read-only, for whoever signs off on the fix.
 6. Show genuine Wispr build usage and the Insights usage card.
 
 ## How this was built with Wispr Flow

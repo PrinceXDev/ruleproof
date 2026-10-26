@@ -1,19 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { api, ApiRequestError } from "@/lib/api";
-import { NO_RUNS } from "@/lib/fixtures";
-import type {
-  CheckResult,
-  Fixture,
-  History,
-  Plan,
-  PlanCase,
-  Run,
-} from "@/lib/types";
-import { gsap, useGSAP, Flip } from "@/lib/gsap";
+import { useRef, useState } from "react";
+import type { Plan } from "@/lib/types";
+import useDriver from "@/hooks/useDriver";
+import usePlanHistory from "@/hooks/usePlanHistory";
+import useStaggerReveal from "@/hooks/useStaggerReveal";
+import useStudioPlan from "@/hooks/useStudioPlan";
+import useStudioRuns from "@/hooks/useStudioRuns";
 
-import Sidebar, { type Section } from "@/components/Sidebar";
+import Sidebar from "@/components/Sidebar";
+import type { Section } from "@/constants/navigation";
 import TopBar from "@/components/TopBar";
 import ExplainScreen from "@/components/ExplainScreen";
 import ReviewScreen from "@/components/ReviewScreen";
@@ -22,272 +18,22 @@ import EvidenceDrawer from "@/components/EvidenceDrawer";
 import HistoryPanel from "@/components/HistoryPanel";
 import FixturesPanel from "@/components/FixturesPanel";
 
-const SAMPLE_RULE =
-  "Viewers can read assets in their own tenant. Editors can also update them. Neither role can access another tenant's assets.";
-
-export default function Home() {
+const Home = () => {
   const [section, setSection] = useState<Section>("checks");
-  const [driver, setDriver] = useState<string>();
+  const driver = useDriver();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-
-  const [text, setText] = useState(SAMPLE_RULE);
-  const [plan, setPlan] = useState<Plan | null>(null);
-  const [history, setHistory] = useState<History | null>(null);
-
-  const [fixture, setFixture] = useState<Fixture>("broken");
-  // Cached per fixture so switching between fixtures is instant and every
-  // result stays on screen for comparison, without re-running or losing any.
-  const [runsByFixture, setRunsByFixture] = useState<
-    Record<Fixture, Run | null>
-  >(NO_RUNS);
-  const run = runsByFixture[fixture];
-  const [bypass, setBypass] = useState(true);
-  const [running, setRunning] = useState(false);
-  const [cancelled, setCancelled] = useState(false);
-  const runAbortRef = useRef<AbortController | null>(null);
-
-  const [generating, setGenerating] = useState(false);
-  const [editingPending, setEditingPending] = useState(false);
-  const [approving, setApproving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const [selectedResultId, setSelectedResultId] = useState<string | null>(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-
-  const [viewOverride, setViewOverride] = useState<0 | 1 | 2 | null>(null);
-  const flipState = useRef<ReturnType<typeof Flip.getState> | null>(null);
-
-  const derivedStage: 0 | 1 | 2 = !plan ? 0 : !plan.approved ? 1 : 2;
-  const stage = viewOverride ?? derivedStage;
-
-  useEffect(() => {
-    fetch("/api/health")
-      .then((r) => r.json())
-      .then((d) => setDriver(d.driver))
-      .catch((e) => console.error("health check failed:", e));
-  }, []);
-
-  const refreshHistory = useCallback(async (rootId: string) => {
-    try {
-      const h = await api.history(rootId);
-      setHistory(h);
-      return h;
-    } catch (e) {
-      // Non-fatal: the current plan/run state is already correct without
-      // history, so this only degrades the History panel and revision
-      // label — but it should still be visible for debugging.
-      console.error("failed to refresh history:", e);
-      return null;
-    }
-  }, []);
-
-  function captureFlip() {
-    const el = document.getElementById("rule-summary-flip");
-    if (el) flipState.current = Flip.getState(el);
-  }
-
-  useGSAP(() => {
-    if (!flipState.current) return;
-    const mm = gsap.matchMedia();
-    mm.add("(prefers-reduced-motion: no-preference)", () => {
-      Flip.from(flipState.current!, {
-        duration: 0.45,
-        ease: "power2.inOut",
-        absolute: true,
-      });
-    });
-    flipState.current = null;
-  }, [plan?.id]);
+  const planHistory = usePlanHistory();
+  const { plan, history, revisionLabel } = planHistory;
+  const runs = useStudioRuns({ plan, refreshHistory: planHistory.refreshHistory, setErrorMsg });
+  const { fixture, run } = runs;
+  const studio = useStudioPlan({ planHistory, runs, setErrorMsg, setSection });
+  const { stage } = studio;
 
   // Workspace entrance
   const shellRef = useRef<HTMLDivElement>(null);
-  useGSAP(
-    () => {
-      const mm = gsap.matchMedia();
-      mm.add("(prefers-reduced-motion: no-preference)", () => {
-        gsap.from("[data-shell-reveal]", {
-          opacity: 0,
-          y: 10,
-          duration: 0.5,
-          ease: "power2.out",
-          stagger: 0.05,
-        });
-      });
-      return () => mm.revert();
-    },
-    { scope: shellRef },
-  );
-
-  async function handleGenerate() {
-    setErrorMsg(null);
-    setGenerating(true);
-    captureFlip();
-    try {
-      const p = plan
-        ? await api.revisePlan(plan.id, text)
-        : await api.createPlan(text);
-      setPlan(p);
-      setRunsByFixture(NO_RUNS);
-      setCancelled(false);
-      setViewOverride(null);
-      await refreshHistory(p.rootPlanId);
-    } catch (e) {
-      setErrorMsg(message(e));
-    } finally {
-      setGenerating(false);
-    }
-  }
-
-  function handleStartOver() {
-    setPlan(null);
-    setHistory(null);
-    setRunsByFixture(NO_RUNS);
-    setText(SAMPLE_RULE);
-    setViewOverride(null);
-    setSelectedResultId(null);
-    setDrawerOpen(false);
-  }
-
-  // Back to Explain with the gap's sentence appended and the cursor at the
-  // end, so the user can generate as-is or dictate their own wording.
-  function handleAddSentence(sentence: string) {
-    if (!plan) return;
-    const next = `${plan.ruleText.trim()} ${sentence}`;
-    setText(next);
-    setViewOverride(0);
-    requestAnimationFrame(() => {
-      const input = document.getElementById("rule-input") as HTMLTextAreaElement | null;
-      input?.focus();
-      input?.setSelectionRange(next.length, next.length);
-    });
-  }
-
-  async function handleEditCase(caseId: string, want: number) {
-    if (!plan) return;
-    setErrorMsg(null);
-    setEditingPending(true);
-    try {
-      const p = await api.editCases(plan.id, { [caseId]: want });
-      setPlan(p);
-      setRunsByFixture(NO_RUNS);
-      setCancelled(false);
-      await refreshHistory(p.rootPlanId);
-    } catch (e) {
-      setErrorMsg(message(e));
-    } finally {
-      setEditingPending(false);
-    }
-  }
-
-  async function handleApprove() {
-    if (!plan) return;
-    setErrorMsg(null);
-    setApproving(true);
-    try {
-      let p = plan;
-      if (
-        p.assumptions &&
-        p.assumptions.length > 0 &&
-        !p.assumptionsAcknowledged
-      ) {
-        p = await api.acknowledge(p.id);
-      }
-      p = await api.approve(p.id);
-      setPlan(p);
-      setViewOverride(null);
-      await refreshHistory(p.rootPlanId);
-    } catch (e) {
-      setErrorMsg(message(e));
-    } finally {
-      setApproving(false);
-    }
-  }
-
-  async function handleRun() {
-    if (!plan || running) return; // guards against rapid-click duplicate runs
-    setErrorMsg(null);
-    setCancelled(false);
-    setRunning(true);
-    const controller = new AbortController();
-    runAbortRef.current = controller;
-    try {
-      const r = await api.createRun(plan.id, fixture, bypass, controller.signal);
-      setRunsByFixture((prev) => ({ ...prev, [fixture]: r }));
-      await refreshHistory(plan.rootPlanId);
-    } catch (e) {
-      if (e instanceof DOMException && e.name === "AbortError") {
-        setCancelled(true);
-      } else {
-        setErrorMsg(message(e));
-      }
-    } finally {
-      setRunning(false);
-      runAbortRef.current = null;
-    }
-  }
-
-  function handleCancelRun() {
-    runAbortRef.current?.abort();
-  }
-
-  function handleFixtureChange(f: Fixture) {
-    if (f === fixture) return;
-    setFixture(f);
-    setCancelled(false);
-    // The run cached for this fixture (if any) is shown immediately —
-    // no need to re-run just to compare against what's already known.
-  }
-
-  function handleSelectResult(caseId: string) {
-    setSelectedResultId(caseId);
-    setDrawerOpen(true);
-  }
-
-  async function handleExportPlan() {
-    if (!plan) return;
-    const bundle = await api.exportBundle(plan.id);
-    const blob = new Blob([JSON.stringify(bundle, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `ruleproof-plan-${plan.id}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  async function handleOpenRun(historicalRun: Run) {
-    setErrorMsg(null);
-    try {
-      let targetPlan = plan;
-      if (!targetPlan || targetPlan.id !== historicalRun.planId) {
-        targetPlan = await api.getPlan(historicalRun.planId);
-        setPlan(targetPlan);
-      }
-      setFixture(historicalRun.fixture);
-      setRunsByFixture({ ...NO_RUNS, [historicalRun.fixture]: historicalRun });
-      setCancelled(false);
-      setSection("checks");
-      setViewOverride(2);
-    } catch (e) {
-      setErrorMsg(message(e));
-    }
-  }
-
-  // A bypass attempt opens the evidence of the approved case it came from.
-  const selectedResult: CheckResult | null =
-    [...(run?.results ?? []), ...(run?.variants ?? [])].find((r) => r.id === selectedResultId) ?? null;
-  const selectedCaseId = selectedResult?.variant?.of ?? selectedResultId;
-  const selectedCase: PlanCase | null =
-    plan?.cases.find((c) => c.id === selectedCaseId) ?? null;
-
-  const revisionLabel =
-    history && plan
-      ? `Revision ${history.lineage.findIndex((p) => p.id === plan.id) + 1} of ${history.lineage.length}`
-      : plan
-        ? "Revision 1"
-        : "No revision yet";
+  useStaggerReveal(shellRef, "[data-shell-reveal]", { y: 10, duration: 0.5, stagger: 0.05 });
 
   const primaryAction =
     section !== "checks"
@@ -295,21 +41,21 @@ export default function Home() {
       : stage === 0
         ? {
             label: plan ? "Update checks" : "Generate checks",
-            onClick: handleGenerate,
-            loading: generating,
-            disabled: !text.trim(),
+            onClick: studio.handleGenerate,
+            loading: studio.generating,
+            disabled: !studio.text.trim(),
           }
         : stage === 1
           ? {
               label: "Approve plan",
-              onClick: handleApprove,
-              loading: approving,
-              disabled: editingPending,
+              onClick: studio.handleApprove,
+              loading: studio.approving,
+              disabled: studio.editingPending,
             }
           : {
               label: run ? "Run again" : "Run checks",
-              onClick: handleRun,
-              loading: running,
+              onClick: runs.handleRun,
+              loading: runs.running,
             };
 
   return (
@@ -330,12 +76,12 @@ export default function Home() {
           <TopBar
             revisionLabel={revisionLabel}
             fixture={fixture}
-            onFixtureChange={handleFixtureChange}
+            onFixtureChange={runs.handleFixtureChange}
             fixtureDisabled={section !== "checks" || !plan?.approved}
             primaryAction={primaryAction}
-            stepperCurrent={derivedStage}
+            stepperCurrent={studio.derivedStage}
             stepperViewing={section === "checks" ? stage : undefined}
-            onStepNavigate={section === "checks" ? setViewOverride : undefined}
+            onStepNavigate={section === "checks" ? studio.setViewOverride : undefined}
             onOpenMobileNav={() => setMobileNavOpen(true)}
           />
         </div>
@@ -351,27 +97,27 @@ export default function Home() {
 
         <main className="flex-1 overflow-y-auto">
           {section === "fixtures" && (
-            <FixturesPanel fixture={fixture} onSelect={setFixture} />
+            <FixturesPanel fixture={fixture} onSelect={runs.setFixture} />
           )}
 
           {section === "history" && (
             <HistoryPanel
               history={history}
               loading={false}
-              onOpenRun={handleOpenRun}
+              onOpenRun={studio.handleOpenRun}
             />
           )}
 
           {section === "checks" && stage === 0 && (
             <ExplainScreen
-              text={text}
-              onTextChange={setText}
-              onGenerate={handleGenerate}
-              loading={generating}
+              text={studio.text}
+              onTextChange={studio.setText}
+              onGenerate={studio.handleGenerate}
+              loading={studio.generating}
               concepts={plan?.concepts ?? null}
               assumptions={plan?.assumptions ?? null}
               hasPlan={Boolean(plan)}
-              onStartOver={handleStartOver}
+              onStartOver={studio.handleStartOver}
             />
           )}
 
@@ -379,11 +125,11 @@ export default function Home() {
             <ReviewScreen
               plan={plan}
               revisionLabel={revisionLabel}
-              onEdit={handleEditCase}
-              onAddSentence={handleAddSentence}
-              onApprove={handleApprove}
-              approving={approving}
-              editingPending={editingPending}
+              onEdit={studio.handleEditCase}
+              onAddSentence={studio.handleAddSentence}
+              onApprove={studio.handleApprove}
+              approving={studio.approving}
+              editingPending={studio.editingPending}
               lineage={history?.lineage}
             />
           )}
@@ -392,36 +138,32 @@ export default function Home() {
             <VerifyScreen
               plan={plan}
               run={run}
-              running={running}
-              cancelled={cancelled}
+              running={runs.running}
+              cancelled={runs.cancelled}
               fixture={fixture}
-              bypass={bypass}
-              onBypassChange={setBypass}
-              onRun={handleRun}
-              onCancel={handleCancelRun}
-              onSelectResult={handleSelectResult}
-              selectedId={selectedResultId}
-              onExport={handleExportPlan}
+              bypass={runs.bypass}
+              onBypassChange={runs.setBypass}
+              onRun={runs.handleRun}
+              onCancel={runs.handleCancelRun}
+              onSelectResult={runs.handleSelectResult}
+              selectedId={runs.selectedResultId}
+              onExport={studio.handleExportPlan}
             />
           )}
         </main>
       </div>
 
       <EvidenceDrawer
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        result={selectedResult}
-        planCase={selectedCase}
+        open={runs.drawerOpen}
+        onClose={runs.closeDrawer}
+        result={runs.selectedResult}
+        planCase={runs.selectedCase}
         plan={plan as Plan}
         run={run}
         revisionLabel={revisionLabel}
       />
     </div>
   );
-}
+};
 
-function message(e: unknown): string {
-  if (e instanceof ApiRequestError) return e.message;
-  if (e instanceof Error) return e.message;
-  return "Something went wrong.";
-}
+export default Home;

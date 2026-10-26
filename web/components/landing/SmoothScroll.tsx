@@ -6,7 +6,7 @@ import { gsap, ScrollTrigger } from "@/lib/gsap";
 
 // Lenis drives the scroll position; GSAP's ticker drives Lenis so that
 // ScrollTrigger animations stay in sync with the smoothed position.
-export default function SmoothScroll() {
+const SmoothScroll = () => {
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const lenis = new Lenis({ lerp: 0.12, anchors: { offset: -80 } });
@@ -20,4 +20,6 @@ export default function SmoothScroll() {
     };
   }, []);
   return null;
-}
+};
+
+export default SmoothScroll;

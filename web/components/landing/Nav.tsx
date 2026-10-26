@@ -5,18 +5,10 @@ import Link from "next/link";
 import { ArrowUpRight, Menu, X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { buttonVariants } from "@/components/ui/button";
+import { GITHUB_URL, NAV_LINKS } from "@/constants/landing";
 import Logo from "./Logo";
 
-const links = [
-  ["#problem", "Why"],
-  ["#workflow", "How it works"],
-  ["#demo", "Demo"],
-  ["#features", "Features"],
-  ["#architecture", "Architecture"],
-  ["#faq", "FAQ"],
-];
-
-export default function Nav() {
+const Nav = () => {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -41,7 +33,7 @@ export default function Nav() {
           <Logo />
         </Link>
         <nav aria-label="Main" className="ml-6 hidden items-center gap-1 lg:flex">
-          {links.map(([href, label]) => (
+          {NAV_LINKS.map(([href, label]) => (
             <a
               key={href}
               href={href}
@@ -53,7 +45,7 @@ export default function Nav() {
         </nav>
         <div className="ml-auto flex items-center gap-2">
           <a
-            href="https://github.com/PrinceXDev/ruleproof"
+            href={GITHUB_URL}
             className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "hidden sm:inline-flex")}
           >
             GitHub
@@ -74,7 +66,7 @@ export default function Nav() {
       </div>
       {open && (
         <nav aria-label="Mobile" className="grid gap-1 px-4 pb-4 lg:hidden">
-          {links.map(([href, label]) => (
+          {NAV_LINKS.map(([href, label]) => (
             <a
               key={href}
               href={href}
@@ -88,4 +80,6 @@ export default function Nav() {
       )}
     </header>
   );
-}
+};
+
+export default Nav;

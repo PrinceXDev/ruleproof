@@ -1,7 +1,7 @@
 "use client";
 import { useGSAP, gsap, SplitText } from "@/lib/gsap";
 
-export default function LandingMotion() {
+const LandingMotion = () => {
   useGSAP(() => {
     const mm = gsap.matchMedia();
 
@@ -73,4 +73,6 @@ export default function LandingMotion() {
   }, []);
 
   return null;
-}
+};
+
+export default LandingMotion;

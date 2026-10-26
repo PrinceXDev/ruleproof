@@ -1,17 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, Clock, DoorOpen, GitBranch, GitCompareArrows, XCircle } from "lucide-react";
+import { CheckCircle2, Clock, DoorOpen, FileText, GitBranch, GitCompareArrows, XCircle } from "lucide-react";
 import clsx from "clsx";
 import type { History, Run } from "@/lib/types";
-import { FIXTURE_LABEL } from "@/lib/fixtures";
+import { FIXTURE_LABEL } from "@/constants/fixtures";
+import { reportPath } from "@/lib/report";
 import Badge from "./Badge";
 import RevisionDiff, { useRevisionDiff } from "./RevisionDiff";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { KIND_LABEL } from "@/constants/labels";
 
-const KIND_LABEL: Record<string, string> = { root: "Original", revision: "Revised wording", edit: "Edited expectation" };
-
-export default function HistoryPanel({
+const HistoryPanel = ({
   history,
   onOpenRun,
   loading,
@@ -19,7 +19,7 @@ export default function HistoryPanel({
   history: History | null;
   onOpenRun: (run: Run) => void;
   loading: boolean;
-}) {
+}) => {
   const lineage = history?.lineage ?? [];
   // null = follow the default pair (the two most recent revisions).
   const [pair, setPair] = useState<{ base: string; head: string } | null>(null);
@@ -115,11 +115,11 @@ export default function HistoryPanel({
       ) : (
         <ul className="space-y-2">
           {history.runs.map((run) => (
-            <li key={run.id}>
+            <li key={run.id} className="flex items-stretch gap-2">
               <button
                 type="button"
                 onClick={() => onOpenRun(run)}
-                className="flex w-full items-center justify-between rounded-md border border-border bg-panel px-3.5 py-2.5 text-left text-sm transition-colors hover:border-ink-faint"
+                className="flex min-w-0 flex-1 items-center justify-between rounded-md border border-border bg-panel px-3.5 py-2.5 text-left text-sm transition-colors hover:border-ink-faint"
               >
                 <div className="flex items-center gap-3">
                   <Clock size={14} className="text-ink-faint" />
@@ -145,15 +145,27 @@ export default function HistoryPanel({
                   )}
                 </div>
               </button>
+              <a
+                href={reportPath(run.id)}
+                target="_blank"
+                rel="noopener"
+                aria-label="Open this run's evidence report"
+                title="Open report"
+                className="grid w-10 shrink-0 place-items-center rounded-md border border-border bg-panel text-ink-faint transition-colors hover:border-ink-faint hover:text-ink"
+              >
+                <FileText size={14} />
+              </a>
             </li>
           ))}
         </ul>
       )}
     </div>
   );
-}
+};
 
-function RevisionPicker({
+export default HistoryPanel;
+
+const RevisionPicker = ({
   label,
   value,
   options,
@@ -165,19 +177,17 @@ function RevisionPicker({
   options: string[];
   nameOf: (id: string) => string;
   onChange: (id: string) => void;
-}) {
-  return (
-    <Select value={value} onValueChange={onChange}>
-      <SelectTrigger aria-label={label} className="min-h-9 min-w-32 py-1.5 text-xs">
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        {options.map((id) => (
-          <SelectItem key={id} value={id}>
-            {nameOf(id)}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
-}
+}) => (
+  <Select value={value} onValueChange={onChange}>
+    <SelectTrigger aria-label={label} className="min-h-9 min-w-32 py-1.5 text-xs">
+      <SelectValue />
+    </SelectTrigger>
+    <SelectContent>
+      {options.map((id) => (
+        <SelectItem key={id} value={id}>
+          {nameOf(id)}
+        </SelectItem>
+      ))}
+    </SelectContent>
+  </Select>
+);
