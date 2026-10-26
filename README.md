@@ -8,6 +8,7 @@
 
 Speak an access rule in plain language, approve the exact checks it produces, then see — with request and response evidence — where your API breaks the rule.
 
+[![RuleProof CI](https://github.com/PrinceXDev/ruleproof/actions/workflows/ruleproof.yml/badge.svg)](https://github.com/PrinceXDev/ruleproof/actions/workflows/ruleproof.yml)
 ![Go](https://img.shields.io/badge/Go-1.26-00ADD8?logo=go&logoColor=white)
 ![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
@@ -17,7 +18,7 @@ Speak an access rule in plain language, approve the exact checks it produces, th
 
 <img src="docs/media/hero-console.gif" width="640" alt="Animated sample: a rule becomes eight checks and two cross-tenant reads fail" />
 
-[Quickstart](#get-started) · [How it works](#how-it-works) · [Screenshots](#explore-the-product) · [Endpoint coverage](#endpoint-coverage) · [Bypass variants](#bypass-variants) · [Revision diff](#revision-diff) · [CI gate](#ci-gate) · [API](#api) · [Architecture](#architecture) · [Scope](#scope-and-limits)
+[Quickstart](#get-started) · [How it works](#how-it-works) · [Screenshots](#explore-the-product) · [Endpoint coverage](#endpoint-coverage) · [Bypass variants](#bypass-variants) · [Revision diff](#revision-diff) · [CI gate](#ci-gate) · [API](#api) · [Architecture](#architecture) · [Scope](#scope-and-limits) · [Contributing](#contributing)
 
 </div>
 
@@ -59,6 +60,50 @@ Broken access control is the #1 risk in the OWASP Top 10, and it hides in plain 
 
 With the sample rule, the seeded-defect API returns **6 passed, 2 failed** (both cross-tenant reads leak data). The same approved plan against the corrected API returns **8 passed**.
 
+### Under the hood
+
+One rule, from dictation to evidence:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor R as Reviewer
+    participant S as Studio
+    participant A as API
+    participant D as Store
+    participant P as Parser
+    participant C as Runner
+    participant F as Fixture API
+
+    R->>S: Dictate or type the rule
+    S->>A: POST /api/plans
+    A->>D: CreateRootPlan(text)
+    D->>P: Parse(text)
+    P-->>D: cases, assumptions, concepts
+    D-->>A: immutable revision + hash
+    A-->>S: plan
+    S->>A: GET /api/plans/:id/coverage
+    A-->>S: covered endpoints and gaps
+    R->>S: Edit expectations, acknowledge assumptions
+    Note over S,D: Every edit creates a new revision. Approval never carries over.
+    S->>A: POST /api/plans/:id/approve
+    A->>D: ApprovePlan(this exact revision)
+    R->>S: Run against a fixture
+    S->>A: POST /api/runs (fixture, bypass)
+    A->>D: RunPlan
+    D->>C: Run(approved cases)
+    C->>F: one request per case, no redirects followed
+    F-->>C: status + body
+    opt bypass variants on
+        D->>C: Run(Expand(deny cases))
+        C->>F: HEAD, trailing slash, spoofed header, ...
+        F-->>C: status + body
+    end
+    D->>D: persist run and evidence
+    A-->>S: verdicts, counts, evidence
+    R->>S: Inspect a failure, trace it back to the rule sentence
+```
+
 ## Endpoint coverage
 
 Access bugs rarely live on the endpoint everyone is looking at. They live on the one nobody wrote a rule for. On the Review step, RuleProof reads the target API's OpenAPI spec and maps the rule onto every object-level operation (a path with an ID in it):
@@ -94,6 +139,18 @@ A fix that passes every approved check can still leave a side door open. With by
 | POST + `X-HTTP-Method-Override: PUT` | denied updates | method rewritten after the access check |
 
 Variants are generated at run time from the approved plan, so they never change what was approved or the plan's hash. A variant **holds** if the API refuses it with 401, 403, 404 or 405, and **leaks** on any 2xx; a redirect, crash or timeout is inconclusive and never counts as safe.
+
+```mermaid
+flowchart LR
+    A[Approved case] --> B{Expects deny?}
+    B -- "no, allow" --> N[No variants]
+    B -- yes --> C[Expand catalog v1]
+    C --> D[Send each variant]
+    D --> E{Response}
+    E -- "401, 403, 404, 405" --> H([Held])
+    E -- 2xx --> L([Leaked: fails the run])
+    E -- "3xx, 5xx, timeout" --> I([Inconclusive: never safe])
+```
 
 The third fixture, **Partial fix**, is the case this exists for. It passes all 12 approved checks, yet 9 of 27 attempts get through: HEAD skips its tenant check, and it trusts `X-Tenant-ID` — including an editor updating another tenant's asset.
 
@@ -151,6 +208,21 @@ RuleProof CI · plan 79ffb19b-… · hash 1af0de86ba13a018 · seeded-defect fixt
 The API does not enforce the approved rule.
 ```
 
+```mermaid
+flowchart TD
+    S([ruleproof-ci]) --> L[Load plan from -bundle or -server]
+    L --> V{Approved, and cases still hash to the approved hash?}
+    V -- no --> X2([exit 2: refuse to run])
+    V -- yes --> R[Run approved checks on -fixture or -base-url]
+    R --> B{-bypass?}
+    B -- yes --> RV[Run bypass variants]
+    B -- no --> REP
+    RV --> REP[Table, GitHub annotations, job summary, JUnit]
+    REP --> P{Every check passed and nothing leaked?}
+    P -- yes --> X0([exit 0])
+    P -- no --> X1([exit 1: fail the build])
+```
+
 | | |
 |---|---|
 | **Plan source** | `-bundle plan.json` (exported from the studio) or `-server http://host:8080 -plan <id>` |
@@ -198,7 +270,7 @@ This repository dogfoods it: [`.github/workflows/ruleproof.yml`](.github/workflo
 ### Local development
 
 ```sh
-# Terminal 1 — API + both fixtures (SQLite by default)
+# Terminal 1 — API + all three fixtures (SQLite by default)
 go run ./cmd/server
 
 # Terminal 2 — web UI with hot reload
@@ -278,6 +350,99 @@ internal/assets — synthetic asset API, started three times:
 | `cmd/ruleproof-ci` | CI gate: verifies an approved, untampered plan, runs it, fails the build on any mismatch. |
 | `cmd/ruleproof` | The original standalone CLI demo (invoice-tenant fixture), Go only. |
 
+### Plan lifecycle
+
+A revision never changes after it is created. Rewording a rule or editing an expectation makes a new child revision, which starts unapproved, so an approval always refers to exactly what was reviewed.
+
+```mermaid
+stateDiagram-v2
+    direction LR
+    state "New child revision" as Child
+    [*] --> Proposed: parse rule
+    Proposed --> Acknowledged: acknowledge assumptions
+    Proposed --> Approved: approve, when there are no assumptions
+    Acknowledged --> Approved: approve
+    Approved --> Approved: run or replay, any fixture
+    Proposed --> Child: revise or edit
+    Acknowledged --> Child: revise or edit
+    Approved --> Child: revise or edit
+    Child --> Proposed: starts unapproved
+    note right of Approved
+        Runs are stored against this
+        revision and its hash.
+    end note
+```
+
+### Data model
+
+```mermaid
+erDiagram
+    PLANS ||--o{ PLANS : "parent of"
+    PLANS ||--o{ RUNS : "tested by"
+    PLANS {
+        text id PK
+        text root_plan_id "first revision of the rule"
+        text parent_plan_id "empty for the root"
+        text kind "root, revision or edit"
+        text rule_text
+        text cases_json
+        text assumptions_json
+        text hash "fingerprint of the approved cases"
+        int assumptions_acknowledged
+        int approved
+        text approved_at
+        text created_at
+    }
+    RUNS {
+        text id PK
+        text plan_id FK
+        text plan_hash "hash the run was made against"
+        text fixture "broken, partial or fixed"
+        text results_json "approved checks"
+        int pass_count
+        int fail_count
+        int error_count
+        text variants_json "bypass attempts"
+        text bypass_catalog "empty when bypass was off"
+        text created_at
+    }
+    SCHEMA_MIGRATIONS {
+        int version PK
+        text applied_at
+    }
+```
+
+Schema changes are append-only migrations in [`internal/store/store.go`](internal/store/store.go), applied in a transaction and recorded in `schema_migrations`, so databases created by older versions upgrade on start.
+
+### Project structure
+
+<details>
+<summary>Show the repository layout</summary>
+
+```
+ruleproof/
+├── cmd/
+│   ├── server/          API + three fixture APIs + static UI, one process
+│   ├── ruleproof-ci/    CI gate (approved-plan runner, JUnit, GitHub annotations)
+│   └── ruleproof/       original standalone CLI demo
+├── internal/
+│   ├── api/             REST handlers and JSON errors
+│   ├── rules/           bounded rule parser and plan hash
+│   ├── store/           plans, runs, migrations (SQLite or Postgres)
+│   ├── check/           HTTP runner and verdicts
+│   ├── bypass/          bypass variant catalog
+│   ├── coverage/        rule → OpenAPI coverage
+│   ├── diff/            revision diff
+│   ├── assets/          synthetic asset API + OpenAPI spec
+│   └── demo/            fixtures for the standalone CLI
+├── web/                 Next.js studio and landing page (static export)
+├── examples/            approved evidence bundles used by CI
+├── docs/                specs and README media
+└── .github/             CI workflow and PR template
+```
+
+</details>
+
 **Frontend:** Next.js 16 + TypeScript, styled entirely with Tailwind CSS v4 utilities and theme tokens. Radix UI primitives (select, tabs, accordion), `class-variance-authority` + `tailwind-merge` for variants, GSAP (ScrollTrigger, SplitText, Flip) and Lenis for motion, `@number-flow/react` for animated counts, Lucide icons. All motion respects `prefers-reduced-motion`, and the layout works from 1440px down to 375px.
 
 ## API
@@ -320,6 +485,29 @@ A passing matrix means **the approved scenarios passed**. It does not prove the 
 - Bypass variants are a fixed, versioned list of common tricks, not a fuzzer. Holding against them is evidence, not a guarantee.
 - No authentication or team approvals yet.
 - `Access-Control-Allow-Origin` defaults to `*` for local development. Set `RULEPROOF_ALLOWED_ORIGIN` to a specific origin before any real deployment. Request bodies are capped at 1MB and the HTTP server sets read/write/idle timeouts.
+
+## Contributing
+
+**Branches and commits.** Branch from `main` as `feat/…`, `fix/…`, `docs/…` or `chore/…`, and use [Conventional Commits](https://www.conventionalcommits.org/) (`feat: add bypass variants`).
+
+**Before opening a PR,** run the same checks CI does:
+
+```sh
+go vet ./... && go test ./...
+cd web && npx tsc --noEmit && npx eslint . && npm run build
+```
+
+The [PR template](.github/pull_request_template.md) carries the product checklist: approved plans must never change silently, and the server must only ever target the bundled fixtures.
+
+**Labels.** Every PR and issue gets one `type:` label, one or more `area:` labels for the packages it touches, and a `priority:` when it matters for the deadline.
+
+| Group | Labels |
+|---|---|
+| Type | `type: feature` `type: bug` `type: enhancement` `type: security` `type: docs` `type: refactor` `type: test` `type: chore` |
+| Area | `area: parser` `area: runner` `area: bypass` `area: coverage` `area: diff` `area: store` `area: api` `area: fixtures` `area: ci-gate` `area: studio` `area: landing` |
+| Priority | `priority: critical` `priority: high` `priority: low` |
+| Status | `status: needs triage` `status: in progress` `status: blocked` |
+| Project | `hackathon` `demo` `wispr` `post-mvp` `good first issue` `help wanted` |
 
 ## Two-minute demo outline
 
