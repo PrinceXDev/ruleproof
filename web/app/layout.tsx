@@ -14,7 +14,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "RuleProof",
-  description: "Speak an access rule, review the reviewed cases, verify what the API actually does.",
+  description:
+    "Speak an access rule, review the test cases it produces, and verify what the API actually enforces.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

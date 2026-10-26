@@ -75,3 +75,37 @@ export interface History {
 export interface ApiError {
   error: string;
 }
+
+export interface TextOp {
+  op: "equal" | "insert" | "delete";
+  text: string;
+}
+
+export interface CaseChange {
+  caseId: string;
+  role: Role;
+  action: ActionKind;
+  scope: Scope;
+  method: string;
+  assetId: string;
+  change: "changed" | "added" | "removed";
+  fromStatus?: number;
+  toStatus?: number;
+  fromLabel?: ExpectedLabel;
+  toLabel?: ExpectedLabel;
+}
+
+export interface PlanDiff {
+  baseId: string;
+  headId: string;
+  textChanged: boolean;
+  text: TextOp[];
+  cases: CaseChange[];
+  unchangedCases: number;
+  assumptionsAdded: string[];
+  assumptionsRemoved: string[];
+  conceptsAdded: Concept[];
+  conceptsRemoved: Concept[];
+  planChanged: boolean;
+  approvalReset: boolean;
+}

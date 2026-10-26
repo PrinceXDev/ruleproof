@@ -1,0 +1,9 @@
+# Render Blueprint: deploys the single Docker image (API + fixtures + UI).
+services:
+  - type: web
+    name: ruleproof
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    autoDeploy: true

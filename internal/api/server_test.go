@@ -239,3 +239,38 @@ func TestOversizedRequestBodyRejected(t *testing.T) {
 		t.Fatalf("oversized body: want 400, got %d", resp.StatusCode)
 	}
 }
+
+func TestDiffEndpoint(t *testing.T) {
+	env := newTestEnv(t)
+	_, plan := env.do(t, http.MethodPost, "/api/plans", map[string]string{"text": sampleRule})
+	rootID := plan["id"].(string)
+	env.do(t, http.MethodPost, "/api/plans/"+rootID+"/approve", nil)
+
+	resp, _ := env.do(t, http.MethodGet, "/api/plans/"+rootID+"/diff", nil)
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("root without base: status %d, want 400", resp.StatusCode)
+	}
+
+	_, edited := env.do(t, http.MethodPatch, "/api/plans/"+rootID+"/cases", map[string]any{
+		"overrides": map[string]int{"viewer-a-update-a1": 200},
+	})
+	editedID := edited["id"].(string)
+
+	resp, d := env.do(t, http.MethodGet, "/api/plans/"+editedID+"/diff", nil)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("diff status %d: %v", resp.StatusCode, d)
+	}
+	cases := d["cases"].([]any)
+	if len(cases) != 1 || cases[0].(map[string]any)["caseId"] != "viewer-a-update-a1" {
+		t.Fatalf("unexpected case changes: %v", cases)
+	}
+	if d["approvalReset"] != true || d["baseId"] != rootID {
+		t.Fatalf("expected approval reset against the root, got %v", d)
+	}
+
+	_, other := env.do(t, http.MethodPost, "/api/plans", map[string]string{"text": sampleRule})
+	resp, _ = env.do(t, http.MethodGet, "/api/plans/"+editedID+"/diff?base="+other["id"].(string), nil)
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("cross-lineage diff: status %d, want 400", resp.StatusCode)
+	}
+}

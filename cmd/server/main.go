@@ -43,17 +43,37 @@ func main() {
 
 	addr := os.Getenv("RULEPROOF_ADDR")
 	if addr == "" {
-		addr = ":8080"
+		// Hosting platforms (Render, Fly, Railway) inject PORT.
+		if port := os.Getenv("PORT"); port != "" {
+			addr = ":" + port
+		} else {
+			addr = ":8080"
+		}
+	}
+
+	// In a single-container deploy the statically exported UI is served from
+	// the same origin as the API. Locally `next dev` serves it instead.
+	webDir := os.Getenv("RULEPROOF_WEB_DIR")
+	if webDir == "" {
+		webDir = "web/out"
+	}
+	mux := http.NewServeMux()
+	mux.Handle("/api/", srv.Routes())
+	if info, err := os.Stat(webDir); err == nil && info.IsDir() {
+		mux.Handle("/", http.FileServer(http.Dir(webDir)))
+	} else {
+		webDir = "(not found; run `npm run build` in web/ or use `npm run dev`)"
 	}
 
 	fmt.Println("RuleProof API listening on", addr)
 	fmt.Println("  storage:       ", db.Driver())
+	fmt.Println("  web UI:        ", webDir)
 	fmt.Println("  broken fixture:", broken.URL)
 	fmt.Println("  fixed fixture: ", fixed.URL)
 
 	httpServer := &http.Server{
 		Addr:              addr,
-		Handler:           srv.Routes(),
+		Handler:           mux,
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
 		WriteTimeout:      15 * time.Second,

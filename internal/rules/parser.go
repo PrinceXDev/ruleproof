@@ -4,7 +4,12 @@
 // of silently guessing — the human approves the plan before anything runs.
 package rules
 
-import "strings"
+import (
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
+	"strings"
+)
 
 type Identity struct {
 	ID     string `json:"id"`
@@ -262,6 +267,27 @@ func findSnippetAny(text string, words ...string) (string, bool) {
 		snippet := strings.TrimSpace(text[start:end])
 		if snippet != "" {
 			return snippet, true
+		}
+	}
+	return "", false
+}
+
+// Hash fingerprints exactly what an approval covers: each case's identity,
+// method and expected status. Any edit to those produces a different hash.
+func Hash(cases []Case) string {
+	h := sha256.New()
+	for _, c := range cases {
+		fmt.Fprintf(h, "%s|%s|%d|", c.ID, c.Method, c.Want)
+	}
+	return hex.EncodeToString(h.Sum(nil))[:16]
+}
+
+// TokenForRole returns the public demo token of the fixed identity for role.
+// Exported bundles never contain tokens, so the CLI restores them from here.
+func TokenForRole(role string) (string, bool) {
+	for _, id := range fixedIdentities {
+		if id.Role == role {
+			return id.Token, true
 		}
 	}
 	return "", false

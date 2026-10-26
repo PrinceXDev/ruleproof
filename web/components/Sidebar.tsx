@@ -1,6 +1,8 @@
 "use client";
 
 import clsx from "clsx";
+import Link from "next/link";
+import Logo from "./landing/Logo";
 import { FlaskConical, History as HistoryIcon, ShieldCheck, X } from "lucide-react";
 
 export type Section = "checks" | "history" | "fixtures";
@@ -38,19 +40,9 @@ export default function Sidebar({
       >
         <div>
           <div className="flex items-center justify-between px-2 pb-6">
-            <div className="flex items-center gap-2">
-              <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden>
-                <rect x="1" y="1" width="20" height="20" rx="6" stroke="#D5F879" strokeWidth="1.6" />
-                <path
-                  d="M7 11.2l2.6 2.6L15.4 8"
-                  stroke="#D5F879"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              <span className="text-[13px] font-semibold tracking-tight text-ink">RuleProof</span>
-            </div>
+            <Link href="/" aria-label="RuleProof home">
+              <Logo />
+            </Link>
             <button
               type="button"
               onClick={onMobileClose}
