@@ -6,6 +6,7 @@ const SuiteActions = ({ model }: { model: LoadedWorkbench }) => {
   const { revision, dirty, busy, editable, analysis, validation, canApprove, readOnly } = model;
   let label = 'Awaiting review';
   let tone: 'neutral' | 'warning' | 'good' = 'neutral';
+
   if (dirty || !revision) {
     label = 'Unsaved changes';
     tone = 'warning';
@@ -70,7 +71,7 @@ const SuiteActions = ({ model }: { model: LoadedWorkbench }) => {
           primary
           disabled={!!busy || dirty || !revision?.approvedBy || readOnly}
           onClick={() => {
-            void model.run(() => model.setTab('Activity'));
+            void model.run(() => model.setTab('Runs'));
           }}
         >
           {busy === 'Running checks' ? (

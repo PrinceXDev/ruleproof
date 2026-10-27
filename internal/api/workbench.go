@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/json"
@@ -10,8 +9,6 @@ import (
 	"net/url"
 	"os"
 	"strings"
-	"sync"
-	"time"
 
 	"ruleproof/internal/assets"
 	"ruleproof/internal/workbench"
@@ -36,7 +33,6 @@ type WorkbenchConfig struct {
 	Accounts         []Account     `json:"accounts"`
 	Environments     []Environment `json:"environments"`
 	SeparateReviewer bool          `json:"separateReviewer"`
-	busy             sync.Map
 }
 
 // ConfigureWorkbench loads operator-managed targets and credentials. Unconfigured
@@ -56,6 +52,9 @@ func (s *Server) ConfigureWorkbench(raw string) error {
 		}
 		if len(cfg.Accounts) == 0 || len(cfg.Environments) == 0 {
 			return fmt.Errorf("configured workbench requires accounts and environments")
+		}
+		if len(cfg.Environments) > 128 {
+			return fmt.Errorf("at most 128 execution environments may be configured per server")
 		}
 		names := map[string]bool{}
 		tokens := map[[32]byte]bool{}
@@ -215,6 +214,10 @@ func (s *Server) handleWorkbench(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	if path == "executions" || strings.HasPrefix(path, "executions/") {
+		s.handleExecutions(w, r, a, path)
+		return
+	}
 	parts := strings.Split(path, "/")
 	if len(parts) < 2 || parts[0] != "revisions" {
 		writeError(w, 404, "not found")
@@ -293,40 +296,7 @@ func (s *Server) handleWorkbench(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, 200, approved)
 		}
 	case "run":
-		if revision.ApprovedBy == "" {
-			writeError(w, 409, "approve this exact revision before execution")
-			return
-		}
-		env, ok := s.environment(a.Workspace, suite.Environment)
-		if !ok {
-			writeError(w, 409, "environment no longer available")
-			return
-		}
-		key := a.Workspace + "/" + env.ID
-		if _, loaded := s.Workbench.busy.LoadOrStore(key, true); loaded {
-			writeError(w, 409, "an execution is already using this environment")
-			return
-		}
-		defer s.Workbench.busy.Delete(key)
-		ctx, cancel := context.WithTimeout(r.Context(), 60*time.Second)
-		defer cancel()
-		transport := http.DefaultTransport.(*http.Transport).Clone()
-		transport.Proxy = nil
-		defer transport.CloseIdleConnections()
-		client := &http.Client{Timeout: 3 * time.Second, Transport: transport, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
-		result, err := workbench.Execute(ctx, suite, env.BaseURL, client, env.secrets)
-		if err != nil {
-			writeError(w, 400, err.Error())
-			return
-		}
-		content, _ := json.Marshal(result)
-		// Preserve partial evidence even when the browser cancels its connection.
-		saveCtx, saveCancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer saveCancel()
-		event, err := s.Store.RecordEvent(saveCtx, a.Workspace, revision.ID, a.Name, "run", content)
-		if writeStoreErr(w, err) {
-			writeJSON(w, 200, event)
-		}
+		s.startExecution(w, r, a, revision, suite)
 	default:
 		writeError(w, 404, "not found")
 	}

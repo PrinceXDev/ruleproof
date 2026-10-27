@@ -93,7 +93,7 @@ export interface AuditEvent {
   revisionId: string;
   actor: string;
   kind: string;
-  content: Evidence | Record<string, never>;
+  content: Evidence | Record<string, unknown>;
   createdAt: string;
 }
 

@@ -8,6 +8,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"sync"
 	"time"
 
 	"ruleproof/internal/assets"
@@ -28,10 +29,13 @@ const maxRequestBodyBytes = 1 << 20
 // checks against, keyed by fixture name ("broken", "partial", "fixed"). All
 // are synthetic and started locally — never an arbitrary user-supplied target.
 type Server struct {
-	Workbench     *WorkbenchConfig
-	Fixtures      map[string]string
-	Store         *store.Store
-	AllowedOrigin string // CORS origin; "*" is fine for this local demo, tighten before any real deployment
+	executionMu      sync.Mutex
+	executionWorkers sync.WaitGroup
+	draining         bool
+	Workbench        *WorkbenchConfig
+	Fixtures         map[string]string
+	Store            *store.Store
+	AllowedOrigin    string // CORS origin; "*" is fine for this local demo, tighten before any real deployment
 }
 
 func New(st *store.Store, fixtures map[string]string) *Server {

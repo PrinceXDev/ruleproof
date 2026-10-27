@@ -11,7 +11,8 @@ import WorkbenchSummary from './WorkbenchSummary';
 import CheckEditor from './CheckEditor';
 import Identities from './Identities';
 import Coverage from './Coverage';
-import Activity from './Activity';
+import RevisionActivity from './RevisionActivity';
+import Executions from './Executions';
 
 interface Props {
   token: string;
@@ -91,7 +92,10 @@ const WorkbenchContent = ({ token, session, signOut }: Props) => {
           onDrift={model.compareSpec}
         />
       )}
-      {tab === 'Activity' && <Activity events={events} />}
+      {tab === 'Runs' && <Executions token={token} session={session} />}
+      {tab === 'Activity' && (
+        <RevisionActivity key={model.revision?.id} token={token} revisionId={model.revision?.id} />
+      )}
       <footer className="pb-5 text-xs leading-relaxed text-ink-muted">
         A pass applies to the reviewed scenarios. Missing combinations remain visible in API
         coverage. Credentials are resolved by the server; evidence is redacted before storage.

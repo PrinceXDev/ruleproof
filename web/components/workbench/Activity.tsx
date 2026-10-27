@@ -3,6 +3,7 @@
 import type { AuditEvent, Evidence } from '@/lib/workbench';
 import { CheckCircle2, ChevronDown, Clock3, FileCheck2, Play } from 'lucide-react';
 import { useState } from 'react';
+import { EXECUTION_EVENT_LABELS } from '@/constants/executions';
 import { Pill, cardClass } from './Controls';
 
 const Activity = ({ events }: { events: AuditEvent[] }) => {
@@ -20,7 +21,14 @@ const Activity = ({ events }: { events: AuditEvent[] }) => {
   return (
     <div className="space-y-4">
       {events.map((event) => {
-        const run = event.kind === 'run' ? (event.content as Evidence) : null;
+        const run = [
+          'run',
+          'execution_interrupted',
+          'execution_cancelled',
+          'execution_progress',
+        ].includes(event.kind)
+          ? (event.content as Evidence)
+          : null;
         const Icon = (() => {
           if (run) {
             return Play;
@@ -39,19 +47,14 @@ const Activity = ({ events }: { events: AuditEvent[] }) => {
                 </span>
                 <div>
                   <h3 className="text-sm font-medium">
-                    {(() => {
-                      if (run) {
-                        return 'Verification completed';
-                      }
-                      if (event.kind === 'approved') {
-                        return 'Revision approved';
-                      }
-                      return 'Revision created';
-                    })()}
+                    {EXECUTION_EVENT_LABELS[event.kind] ?? event.kind}
                   </h3>
                   <p className="mt-1 text-xs text-ink-muted">
                     {event.actor} · {new Date(event.createdAt).toLocaleString()}
                   </p>
+                  {'reason' in event.content && typeof event.content.reason === 'string' && (
+                    <p className="mt-2 text-xs text-ink-muted">{event.content.reason}</p>
+                  )}
                 </div>
               </div>
               {run && (

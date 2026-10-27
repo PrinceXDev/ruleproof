@@ -341,8 +341,8 @@ func TestMigratesPreVersioningDatabase(t *testing.T) {
 		if err != nil {
 			t.Fatalf("open legacy db: %v", err)
 		}
-		if v, err := st.SchemaVersion(ctx); err != nil || v != 3 {
-			t.Fatalf("schema version %d (err %v), want 3", v, err)
+		if v, err := st.SchemaVersion(ctx); err != nil || v != 4 {
+			t.Fatalf("schema version %d (err %v), want 4", v, err)
 		}
 		run, err := st.GetRun(ctx, "old-run")
 		if err != nil {

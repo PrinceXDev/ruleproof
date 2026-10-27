@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"ruleproof/internal/api"
 	"ruleproof/internal/assets"
@@ -73,11 +74,21 @@ func TestWorkspaceApprovalIsolationAndEvidence(t *testing.T) {
 	request("viewer", "POST", base+"/run", nil, 403)
 	request("author", "POST", base+"/run", nil, 409)
 	request("peer", "POST", base+"/approve", nil, 200)
-	var event store.AuditEvent
-	_ = json.Unmarshal(request("author", "POST", base+"/run", nil, 200), &event)
+	var job store.Execution
+	_ = json.Unmarshal(request("author", "POST", base+"/run", map[string]string{"requestKey": "workspace-lifecycle-request"}, 202), &job)
+	deadline := time.Now().Add(5 * time.Second)
+	for time.Now().Before(deadline) {
+		_ = json.Unmarshal(request("viewer", "GET", "executions/"+job.ID, nil, 200), &job)
+		if job.Status != "running" {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	request("outsider", "GET", "executions/"+job.ID, nil, 404)
+	request("viewer", "POST", "executions/"+job.ID+"/cancel", nil, 403)
 	var evidence workbench.Evidence
-	_ = json.Unmarshal(event.Content, &evidence)
-	if evidence.Passed != 8 || evidence.Failed+evidence.Errors != 0 {
+	_ = json.Unmarshal(job.Evidence, &evidence)
+	if job.Status != "completed" || evidence.Passed != 8 || evidence.Failed+evidence.Errors != 0 {
 		t.Fatalf("unexpected evidence: %+v", evidence)
 	}
 	exported := request("viewer", "GET", base+"/export", nil, 200)

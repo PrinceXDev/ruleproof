@@ -33,8 +33,10 @@ configurable workflow in the Studio sidebar.
 - Exact HTTP status matching; redirects are never followed. A crash, timeout,
   incomplete response, or skipped step cannot pass as a denial.
 - A 60-second overall run limit and three-second individual request limit.
-- Each server process serializes runs per environment. Deploy a single execution
-  process per environment; separate replicas and CLI runs do not share this lock.
+- Studio reservations serialize executions per workspace/environment across
+  replicas sharing the same database. CLI executions remain operator-coordinated.
+  Replicas must use identical environment configuration. PostgreSQL is recommended
+  for multiple hosts; SQLite coordination applies to connections to one local file.
 - External URLs and credential references are operator-configured; imported specs
   and browser requests cannot select arbitrary execution hosts or read arbitrary
   environment variables. Use dedicated staging/test environments for mutations.
@@ -102,6 +104,53 @@ detect changes to the target's current specification. The caller supplies the
 authorized target URL, so confirm it corresponds to the bundle's environment.
 
 ## Verification
+
+### Durable execution and operational dashboard
+
+`POST /api/workbench/revisions/{id}/run` now returns **202** with an execution
+receipt, rather than waiting for an audit event. Send `{ "requestKey": "<UUID>" }`.
+Repeating a key as the same workspace actor returns the same receipt and never
+starts another worker; reusing it for another revision/environment returns 409.
+Only an approved, integrity-checked revision can execute. An environment already
+reserved by another receipt returns 409; submissions are not queued.
+
+The accepted worker continues independently of browser disconnects. Redacted
+evidence and the current case are checkpointed before the next request. Poll
+`GET /api/workbench/executions` for compact summaries or `/{id}` for full evidence.
+The list includes the latest 50 receipts and every unresolved reservation; old
+blocked environments cannot disappear behind completed history. Configurations
+are bounded to 128 environments per server. All reads are workspace-scoped.
+
+Authors/reviewers may `POST /executions/{id}/cancel`; viewers cannot. Cancellation
+is persisted, polled every 200 ms, and checked at the next checkpoint.
+Cancellation racing completion conservatively wins. Already accepted
+downstream work may still finish, so cancellation does not imply rollback.
+
+Runs have a 60-second execution budget and a 90-second reservation deadline.
+Process loss, request errors, cancellation, or lost persistence keep the target
+reserved. Expired active receipts appear interrupted; **no automatic retry,
+takeover, or replay occurs**. After the deadline, a reviewer may inspect/reset
+the target, stop the former worker, and `POST /executions/{id}/recover` with
+10–1000 characters of recovery notes. This records an audit event and releases
+the reservation. The old worker cannot checkpoint/finalize afterward. This is
+not an exactly-once guarantee for external HTTP side effects. Operators must
+verify worker shutdown and downstream state before recovery. Ordinary shutdown
+drains accepted work before closing the database.
+
+The Runs view shows completed, failing, active, and recovery counts for the listed
+receipts, an accessible outcome history, and evidence inspection. Failed checks
+are distinct from request errors and interrupted runs. Regression watch compares
+only completed runs of the same suite hash, environment, and nonempty data version;
+it lists previously passing case IDs that now fail. The operator-supplied data
+version is provenance, not an independently verified database snapshot. Missing
+comparable history displays an unavailable state. Charts do not claim a security
+score or production traffic statistics.
+
+This dashboard scope follows [Grafana's dashboard guidance](https://grafana.com/docs/grafana/latest/visualizations/dashboards/build-dashboards/best-practices/)
+and [OWASP's endpoint-level authorization guidance](https://api-security.owasp.org/editions/2023/en/0xa1-broken-object-level-authorization/):
+surface actionable evidence, preserve coverage context, and expose uncertainty.
+Broader business analytics, alert delivery, SSO, and managed job queues require
+separate product requirements and are outside this increment.
 
 Backend tests cover assertions, mutation despite denial, unreadable baselines,
 redaction, bounds, redirects, exact coverage, scenario failure propagation,

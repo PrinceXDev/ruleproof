@@ -27,6 +27,12 @@ type Evidence struct {
 // scenarios stop after their first failure; unrelated scenarios still run.
 // There are no automatic retries of writes or permission transitions.
 func Execute(ctx context.Context, s Suite, base string, client *http.Client, credentials map[string]string) (Evidence, error) {
+	return ExecuteWithProgress(ctx, s, base, client, credentials, nil)
+}
+
+// ExecuteWithProgress persists progress before and after each case. A failed
+// checkpoint stops execution rather than replaying an uncertain request.
+func ExecuteWithProgress(ctx context.Context, s Suite, base string, client *http.Client, credentials map[string]string, progress func(Evidence, string) error) (Evidence, error) {
 	e := Evidence{SuiteHash: Hash(s), SpecHash: Hash(s.Spec), Environment: s.Environment, BuildCommit: s.BuildCommit, DataVersion: s.DataVersion, CreatedAt: time.Now().UTC(), Results: []check.Result{}}
 	if err := Validate(s); err != nil {
 		return e, err
@@ -53,6 +59,14 @@ func Execute(ctx context.Context, s Suite, base string, client *http.Client, cre
 		secrets = append(secrets, secret)
 	}
 	for _, c := range s.Cases {
+		if err := ctx.Err(); err != nil {
+			return e, err
+		}
+		if progress != nil {
+			if err := progress(e, c.ID); err != nil {
+				return e, err
+			}
+		}
 		request := c.Request()
 		request.Rule = s.RuleText
 		request.Token = tokens[c.IdentityID]
@@ -69,10 +83,17 @@ func Execute(ctx context.Context, s Suite, base string, client *http.Client, cre
 			request.RequestBody = ""
 			request.State = nil
 			e.Results = append(e.Results, check.Result{Case: request, Verdict: "error", Detail: "not executed: an earlier step in this scenario failed"})
+			e.Passed, e.Failed, e.Errors = check.Tally(e.Results)
 			continue
 		}
 		result := check.RunWithClient(ctx, client, strings.TrimRight(base, "/"), []check.Case{request})[0]
 		e.Results = append(e.Results, result)
+		e.Passed, e.Failed, e.Errors = check.Tally(e.Results)
+		if progress != nil {
+			if err := progress(e, ""); err != nil {
+				return e, err
+			}
+		}
 		if c.Scenario != "" && result.Verdict != "pass" {
 			blocked[c.Scenario] = true
 		}

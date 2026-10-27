@@ -8,11 +8,15 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"ruleproof/internal/api"
@@ -85,5 +89,25 @@ func main() {
 		WriteTimeout:      70 * time.Second,
 		IdleTimeout:       60 * time.Second,
 	}
-	log.Fatal(httpServer.ListenAndServe())
+	shutdown, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	serveErr := make(chan error, 1)
+	go func() { serveErr <- httpServer.ListenAndServe() }()
+	select {
+	case err := <-serveErr:
+		if !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalf("HTTP server stopped: %v", err)
+		}
+	case <-shutdown.Done():
+	}
+	closeCtx, closeCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer closeCancel()
+	if err := httpServer.Shutdown(closeCtx); err != nil {
+		log.Printf("HTTP shutdown: %v", err)
+	}
+	drainCtx, drainCancel := context.WithTimeout(context.Background(), 70*time.Second)
+	defer drainCancel()
+	if err := srv.ShutdownExecutions(drainCtx); err != nil {
+		log.Printf("execution drain: %v", err)
+	}
 }
