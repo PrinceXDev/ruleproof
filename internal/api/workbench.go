@@ -260,12 +260,21 @@ func (s *Server) handleWorkbench(w http.ResponseWriter, r *http.Request) {
 		writeError(w, 405, "method not allowed")
 		return
 	}
-	if action == "drift" {
+	if action == "drift" || action == "impact" {
 		var b struct {
 			Spec json.RawMessage `json:"spec"`
 		}
 		if decodeJSON(w, r, &b) != nil {
 			writeError(w, 400, "invalid OpenAPI JSON")
+			return
+		}
+		if action == "impact" {
+			report, err := workbench.AnalyzeImpact(suite, b.Spec)
+			if err != nil {
+				writeError(w, 400, err.Error())
+				return
+			}
+			writeJSON(w, 200, report)
 			return
 		}
 		drift, err := workbench.CompareSpecs(suite.Spec, b.Spec)

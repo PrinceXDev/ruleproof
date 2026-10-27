@@ -74,6 +74,14 @@ func TestWorkspaceApprovalIsolationAndEvidence(t *testing.T) {
 	request("viewer", "POST", base+"/run", nil, 403)
 	request("author", "POST", base+"/run", nil, 409)
 	request("peer", "POST", base+"/approve", nil, 200)
+	var impact workbench.ImpactReport
+	_ = json.Unmarshal(request("viewer", "POST", base+"/impact", map[string]any{"spec": suite.Spec}, 200), &impact)
+	if impact.SuiteHash != revision.Hash || len(impact.Recommended) != 0 {
+		t.Fatalf("unexpected baseline impact: %+v", impact)
+	}
+	request("outsider", "POST", base+"/impact", map[string]any{"spec": suite.Spec}, 404)
+	request("viewer", "POST", base+"/impact", map[string]any{"spec": map[string]any{"openapi": "2.0"}}, 400)
+	request("viewer", "POST", base+"/impact", map[string]any{"spec": suite.Spec, "targetUrl": "https://example.test"}, 400)
 	var job store.Execution
 	_ = json.Unmarshal(request("author", "POST", base+"/run", map[string]string{"requestKey": "workspace-lifecycle-request"}, 202), &job)
 	deadline := time.Now().Add(5 * time.Second)
@@ -107,6 +115,7 @@ func TestWorkspaceApprovalIsolationAndEvidence(t *testing.T) {
 	request("author", "POST", "revisions/"+child.ID+"/run", nil, 409)
 	// Even a storage-level modification cannot acquire approval with an old hash.
 	tampered, _ := st.SaveRevision(context.Background(), "team", "", "author", "wrong-hash", revision.Content)
+	request("viewer", "POST", "revisions/"+tampered.ID+"/impact", map[string]any{"spec": suite.Spec}, 409)
 	request("peer", "POST", "revisions/"+tampered.ID+"/approve", nil, 409)
 }
 

@@ -1,0 +1,93 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "RuleProof fixture: project assets",
+    "version": "1.1.0",
+    "description": "Synthetic tenant-scoped asset API. Tokens are public demo labels."
+  },
+  "paths": {
+    "/assets/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "operationId": "getAsset",
+        "summary": "Read an asset",
+        "responses": {
+          "200": {
+            "description": "The asset"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      },
+      "put": {
+        "operationId": "updateAsset",
+        "summary": "Update an asset",
+        "responses": {
+          "200": {
+            "description": "Updated"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/assets/{id}/export": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "operationId": "exportAsset",
+        "summary": "Export an asset as CSV",
+        "responses": {
+          "200": {
+            "description": "CSV export"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/assets/search": {
+      "get": {
+        "summary": "Search tenant assets",
+        "responses": {
+          "200": {
+            "description": "Matching tenant assets"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "Bearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  }
+}

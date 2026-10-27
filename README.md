@@ -6,7 +6,7 @@
 
 **Your UI says no. Does your API?**
 
-Speak an access rule in plain language, approve the exact checks it produces, then see — with request and response evidence — where your API breaks the rule.
+Define and approve an authorization contract, test real API permissions, and trace OpenAPI changes to the checks that need review. Start with a plain-language guided demo or build a configurable suite in the authorization workbench.
 
 [![RuleProof CI](https://github.com/PrinceXDev/ruleproof/actions/workflows/ruleproof.yml/badge.svg)](https://github.com/PrinceXDev/ruleproof/actions/workflows/ruleproof.yml)
 ![Go](https://img.shields.io/badge/Go-1.26-00ADD8?logo=go&logoColor=white)
@@ -16,9 +16,11 @@ Speak an access rule in plain language, approve the exact checks it produces, th
 ![SQLite | Postgres](https://img.shields.io/badge/SQLite%20%7C%20Postgres-ready-4169E1?logo=postgresql&logoColor=white)
 ![Wispr Flow](https://img.shields.io/badge/Dictated%20with-Wispr%20Flow-D5F879)
 
-<img src="docs/media/hero-console.gif" width="640" alt="Animated sample: a rule becomes eight checks and two cross-tenant reads fail" />
+<a href="docs/media/workbench-matrix.jpg"><img src="docs/media/workbench-matrix.jpg" width="708" alt="Authorization workbench permission matrix with identities, tenant scopes, exact expected statuses, and response and state assertions" /></a>
 
-[Quickstart](#get-started) · [How it works](#how-it-works) · [Screenshots](#explore-the-product) · [Endpoint coverage](#endpoint-coverage) · [Bypass variants](#bypass-variants) · [Revision diff](#revision-diff) · [CI gate](#ci-gate) · [API](#api) · [Architecture](#architecture) · [Scope](#scope-and-limits) · [Contributing](#contributing)
+<p><sub>The current workbench: explicit permission expectations tied to a reviewed revision.</sub></p>
+
+[Quickstart](#get-started) · [Workbench](#authorization-workbench) · [Durable runs](#durable-executions) · [Change impact](#authorization-impact-analysis) · [Screenshots](#explore-the-product) · [CI gate](#ci-gate) · [API](#api) · [Architecture](#architecture) · [Scope](#guided-demo-scope-and-limits) · [Contributing](#contributing)
 
 </div>
 
@@ -26,26 +28,31 @@ Speak an access rule in plain language, approve the exact checks it produces, th
 
 ## Why RuleProof
 
-Broken access control is the #1 risk in the OWASP Top 10, and it hides in plain sight: the button is gone, so everyone assumes the data is safe. RuleProof makes the question explicit — **an identity, an action, a tenant, an expected status** — and keeps the request and response as proof when the answer is wrong.
+Authorization bugs can hide behind a missing button while the underlying API still returns protected data. RuleProof makes the question explicit — **an identity, an action, a tenant, an expected status** — and records request and response evidence when the answer is wrong.
 
-> Example rule: *"Viewers can read assets in their own tenant. Editors can also update them. Neither role can access another tenant's assets."*
+> Example rule: _"Viewers can read assets in their own tenant. Editors can also update them. Neither role can access another tenant's assets."_
 
-| | Feature | What it does |
-|---|---|---|
-| 🗣️ | **Plain-language rules** | Type or dictate a rule with Wispr Flow. No policy language to learn. |
-| 🧩 | **Bounded parser with provenance** | Extracts roles, actions and tenant scope sentence by sentence. Every concept links to the sentence it came from. |
-| ⚠️ | **Assumptions, never guesses** | Wording outside the vocabulary becomes a visible assumption that must be acknowledged before approval. |
-| 🧮 | **Full coverage matrix** | 2 roles × 2 actions × 2 scopes = 8 explicit expectations, including the cases nobody wrote down. |
-| ✅ | **Approve the exact revision** | Plans are immutable. Any edit creates a new revision, and the old approval does not carry over. |
-| 🎯 | **Exact status matching** | Want 403, got 500? That's a failure. Crashes and redirects never pass as a "deny". |
-| 🔍 | **Evidence inspector** | Rule excerpt → expectation → request (redacted headers) → response body, plus a plain-language explanation. |
-| 🗺️ | **Endpoint coverage** | Maps the rule onto the API's OpenAPI spec and flags object-level endpoints it never mentions, with a sentence that closes the gap. |
-| 🚪 | **Bypass variants** | For every denied request, also tries HEAD, a trailing slash, an upper-case ID, a spoofed `X-Tenant-ID` header and a method override. Catches the fix that only covers the exact request. |
-| 🔀 | **Revision diff** | Before re-approving, see word-level rule edits, every flipped expectation, new or resolved assumptions, and whether an old approval was reset. |
-| 🚦 | **CI gate** | `ruleproof-ci` re-runs an approved plan on every push and fails the build on any mismatch. Refuses unapproved or edited plans. |
-| 🕓 | **Run history and replay** | Every run is stored against the revision it tested. Compare seeded-defect vs corrected side by side. |
-| 📦 | **Exportable evidence bundle** | One JSON file with the rule, every revision, approvals and runs. |
-| 🗄️ | **SQLite or Postgres** | Embedded SQLite by default. Set `DATABASE_URL` and the same SQL runs on Postgres. |
+|     | Feature                            | What it does                                                                                                                                                                             |
+| --- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 🗣️  | **Plain-language rules**           | Type or dictate a rule with Wispr Flow. No policy language to learn.                                                                                                                     |
+| 🧩  | **Bounded parser with provenance** | Extracts roles, actions and tenant scope sentence by sentence. Every concept links to the sentence it came from.                                                                         |
+| ⚠️  | **Assumptions, never guesses**     | Wording outside the vocabulary becomes a visible assumption that must be acknowledged before approval.                                                                                   |
+| 🧮  | **Permission matrix**              | The guided sample starts with 2 roles × 2 actions × 2 scopes. Workbench supports named identities, custom operations, and visible identity/scope coverage gaps.                          |
+| ✅  | **Approve the exact revision**     | Plans are immutable. Any edit creates a new revision, and the old approval does not carry over.                                                                                          |
+| 🎯  | **Exact status matching**          | Want 403, got 500? That's a failure. Crashes and redirects never pass as a "deny".                                                                                                       |
+| 🔍  | **Evidence inspector**             | Rule excerpt → expectation → request (redacted headers) → response body, plus a plain-language explanation.                                                                              |
+| 🗺️  | **Endpoint coverage**              | Maps the rule onto the API's OpenAPI spec and flags object-level endpoints it never mentions, with a sentence that closes the gap.                                                       |
+| 🚪  | **Bypass variants**                | For every denied request, also tries HEAD, a trailing slash, an upper-case ID, a spoofed `X-Tenant-ID` header and a method override. Catches the fix that only covers the exact request. |
+| 🔀  | **Revision diff**                  | Before re-approving, see word-level rule edits, every flipped expectation, new or resolved assumptions, and whether an old approval was reset.                                           |
+| 🚦  | **CI gate**                        | `ruleproof-ci` re-runs an approved plan on every push and fails the build on any mismatch. Refuses unapproved or edited plans.                                                           |
+| 🕓  | **Run history and replay**         | Every run is stored against the revision it tested. Compare seeded-defect vs corrected side by side.                                                                                     |
+| 📦  | **Exportable evidence bundle**     | One JSON file with the rule, every revision, approvals and runs.                                                                                                                         |
+| 🗄️  | **SQLite or Postgres**             | Embedded SQLite by default. Set `DATABASE_URL` and the same SQL runs on Postgres.                                                                                                        |
+| 🧪  | **Response and state assertions**  | Check JSON fields and collections, or verify that a denied write left protected state unchanged.                                                                                         |
+| 👥  | **Workspace review**               | Author, reviewer, and viewer access; optional independent approval; server-managed targets and credential references.                                                                    |
+| 🛡️  | **Durable executions**             | Runs survive browser disconnects, deduplicate submissions, checkpoint evidence, and reserve environments across server instances sharing a database.                                     |
+| 📊  | **Operational dashboard**          | Recorded run outcomes, active work, recovery status, evidence inspection, and comparisons between matching contracts, environments, and data versions.                                   |
+| 🔗  | **Authorization impact analysis**  | Follow changed operations, schemas, and security schemes to affected checks, state observers, scenarios, and coverage gaps. Export the review plan with its source hashes.               |
 
 ## How it works
 
@@ -53,8 +60,13 @@ Broken access control is the #1 risk in the OWASP Top 10, and it hides in plain 
 
 Open **Studio → Workbench** for configurable identities, OpenAPI import, precise
 endpoint coverage, response and state assertions, ordered scenarios, independent
-team review, and redacted execution history. The original guided demo remains
+team review, durable runs, and authorization impact analysis. The original guided demo remains
 available under **Checks**.
+
+1. **Define** the environment, identities, concrete requests, expected statuses, and assertions. Import an OpenAPI 3 JSON document under **API coverage**.
+2. **Review** missing operations and identity/scope combinations. Save a revision and approve its exact fingerprint; a changed contract requires a new approval.
+3. **Verify** against an operator-configured test API. Follow progress, cancellation, and recorded evidence under **Runs**.
+4. **Assess changes** under **Change impact** before adopting a candidate specification and reviewing the next revision.
 
 The workbench includes a dedicated CI command with OpenAPI drift gating and JUnit
 reports. See the [workbench guide](docs/specs/authorization-workbench.md) for the
@@ -69,18 +81,59 @@ go run ./cmd/ruleproof-suite -bundle approved-suite.json -base-url https://stagi
 Existing legacy approvals need review and re-export after upgrading to the full
 case fingerprint. Stored plans and run history are retained.
 
+### Durable executions
+
+Accepted workbench runs continue after the browser closes. A database-backed
+reservation prevents overlapping runs against the same workspace/environment,
+including across replicas sharing that database. Retrying the same request key
+returns the same execution receipt. Progress and redacted evidence are stored
+before the next request starts.
+
+The **Runs** dashboard shows completed, failing, active, and recovery counts;
+recorded outcome history; and per-check evidence. Regression watch compares only
+completed runs with the same suite hash, environment, and nonempty data version.
+The data version is operator-supplied provenance, not a verified database snapshot.
+
+Authors and reviewers can request cancellation. A cancelled or interrupted run
+may have changed the target, so its environment remains reserved until a reviewer
+verifies the target and previous worker, then records a recovery decision after
+the reservation deadline. Interrupted requests are never replayed automatically.
+CLI executions remain operator-coordinated and do not share Studio reservations.
+
+### Authorization impact analysis
+
+Upload a candidate OpenAPI document in **Change impact** to compare it with a
+saved suite. The report follows transitive local component references, inherited
+security settings, and security scheme dependencies. Changed state-observer reads
+also implicate the protected write; ordered scenarios stay together in the review
+plan. Removed routes, new identity/scope gaps, and exclusions needing renewed
+review remain visible.
+
+The report distinguishes **Affected**, **Uncertain**, and **Unchanged in spec**.
+Incomplete static mappings broaden review to the full suite. Analysis sends no
+requests to the target, changes no saved contract, and grants no approval.
+Implementation-only permission changes still require full-suite verification.
+Export the report as JSON to retain its baseline suite and specification hashes.
+
+Try [the sample candidate specification](examples/tenant-isolation-impact.openapi.json)
+against the bundled tenant suite: it introduces bearer authentication on asset
+reads and an uncovered search endpoint. The report identifies **2 affected
+operations, 5 checks to review, and 4 identity/scope gaps** on the new operation.
+
+### Guided demo walkthrough
+
 <div align="center">
 <img src="docs/media/how-it-works.gif" width="900" alt="Studio walkthrough: type the rule, generate checks, approve, run against the seeded defect, inspect evidence, switch to the corrected API" />
 </div>
 
 1. **Explain** — describe who can do what. The parser extracts concepts and flags anything it can't resolve.
 2. **Review and approve** — see which API endpoints the rule covers, inspect the 8 proposed checks, edit any expected outcome, acknowledge assumptions, approve.
-3. **Run** — send the approved requests to the *seeded-defect* or *corrected* fixture API.
+3. **Run** — send the approved requests to the _seeded-defect_ or _corrected_ fixture API.
 4. **Inspect** — open any result to trace it from the rule sentence to the raw response.
 
 With the sample rule, the seeded-defect API returns **6 passed, 2 failed** (both cross-tenant reads leak data). The same approved plan against the corrected API returns **8 passed**.
 
-### Under the hood
+### Under the hood: guided demo
 
 One rule, from dictation to evidence:
 
@@ -140,7 +193,7 @@ API coverage · 2 of 3 endpoints
 
 - The action comes from the path's last literal segment (`/export`), or from the HTTP method (`GET` read, `PUT`/`PATCH` update).
 - Actions outside the parser's vocabulary are still listed as gaps, marked as not testable yet, rather than silently ignored.
-- Coverage uses the spec bundled with the fixture (`GET /api/fixtures/openapi.json`). Bringing your own spec is not supported yet.
+- The guided demo uses the fixture spec (`GET /api/fixtures/openapi.json`). Workbench supports imported OpenAPI 3 JSON, including collection, search, export, and bulk operations, plus explicit identity/scope gaps.
 
 ```sh
 curl localhost:8080/api/plans/<revision id>/coverage
@@ -150,13 +203,13 @@ curl localhost:8080/api/plans/<revision id>/coverage
 
 A fix that passes every approved check can still leave a side door open. With bypass variants on, every check that expects a deny is also tried in the shapes attackers use:
 
-| Variant | Applies to | What it catches |
-|---|---|---|
-| HEAD instead of GET | denied reads and exports | access checks registered only for GET |
-| Trailing slash | every denied check | router and access check normalising paths differently |
-| Upper-case object ID | every denied check | case-insensitive lookup, case-sensitive ownership check |
-| Spoofed `X-Tenant-ID` | cross-tenant checks | trusting a tenant the client claims |
-| POST + `X-HTTP-Method-Override: PUT` | denied updates | method rewritten after the access check |
+| Variant                              | Applies to               | What it catches                                         |
+| ------------------------------------ | ------------------------ | ------------------------------------------------------- |
+| HEAD instead of GET                  | denied reads and exports | access checks registered only for GET                   |
+| Trailing slash                       | every denied check       | router and access check normalising paths differently   |
+| Upper-case object ID                 | every denied check       | case-insensitive lookup, case-sensitive ownership check |
+| Spoofed `X-Tenant-ID`                | cross-tenant checks      | trusting a tenant the client claims                     |
+| POST + `X-HTTP-Method-Override: PUT` | denied updates           | method rewritten after the access check                 |
 
 Variants are generated at run time from the approved plan, so they never change what was approved or the plan's hash. A variant **holds** if the API refuses it with 401, 403, 404 or 405, and **leaks** on any 2xx; a redirect, crash or timeout is inconclusive and never counts as safe.
 
@@ -208,7 +261,7 @@ curl localhost:8080/api/plans/<revision id>/diff              # vs. its parent
 curl "localhost:8080/api/plans/<revision id>/diff?base=<id>"  # vs. any revision of the same rule
 ```
 
-## Evidence report
+## Guided demo evidence report
 
 Every run has a read-only report page that anyone can open from a link, with no sign-in: the rule, the fixture, the revision, every check with its exact request and captured response, and the bypass attempts. **Share report** on the Verify screen copies the link; each run in Run history has an **Open report** button.
 
@@ -219,6 +272,10 @@ Every run has a read-only report page that anyone can open from a link, with no 
 The report checks that the run's plan hash matches the approved revision, so the evidence is tied to exactly what was reviewed. **Print / PDF** switches to a light layout and expands every check, ready to attach to a ticket or an audit.
 
 ## CI gate
+
+The guided demo uses `ruleproof-ci`. Workbench exports use `ruleproof-suite`, as
+shown in the [workbench workflow](#authorization-workbench), with credential
+references, specification drift checks, and response/state assertions.
 
 A rule you checked once can regress tomorrow. Export the approved plan from the studio (**Export JSON**), commit it, and let CI re-run it on every push.
 
@@ -253,15 +310,15 @@ flowchart TD
     P -- no --> X1([exit 1: fail the build])
 ```
 
-| | |
-|---|---|
-| **Plan source** | `-bundle plan.json` (exported from the studio) or `-server http://host:8080 -plan <id>` |
-| **Target** | `-fixture broken\|partial\|fixed` (bundled), or `-base-url https://staging.example.com` for your own API |
-| **Credentials** | Demo tokens by default; override per role with `-token viewer=$VIEWER_TOKEN` |
-| **Bypass** | `-bypass` also tries bypass variants of every denied check; any leak fails the build |
-| **Integrity** | Refuses plans that are unapproved, or whose cases no longer match the approved hash |
-| **Exit codes** | `0` all passed · `1` mismatch or error · `2` invalid input or plan |
-| **Reports** | GitHub Actions error annotations and job summary (automatic), JUnit XML with `-junit report.xml`, raw results with `-json` |
+|                 |                                                                                                                            |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| **Plan source** | `-bundle plan.json` (exported from the studio) or `-server http://host:8080 -plan <id>`                                    |
+| **Target**      | `-fixture broken\|partial\|fixed` (bundled), or `-base-url https://staging.example.com` for your own API                   |
+| **Credentials** | Demo tokens by default; override per role with `-token viewer=$VIEWER_TOKEN`                                               |
+| **Bypass**      | `-bypass` also tries bypass variants of every denied check; any leak fails the build                                       |
+| **Integrity**   | Refuses plans that are unapproved, or whose cases no longer match the approved hash                                        |
+| **Exit codes**  | `0` all passed · `1` mismatch or error · `2` invalid input or plan                                                         |
+| **Reports**     | GitHub Actions error annotations and job summary (automatic), JUnit XML with `-junit report.xml`, raw results with `-json` |
 
 This repository dogfoods it: [`.github/workflows/ruleproof.yml`](.github/workflows/ruleproof.yml) requires the example plans to pass on the corrected API with bypass variants, to fail on the seeded defect, and to fail on the partial fix **only** with `-bypass` — so the gate is proven to catch both leaks.
 
@@ -271,6 +328,23 @@ This repository dogfoods it: [`.github/workflows/ruleproof.yml`](.github/workflo
 </div>
 
 ## Explore the product
+
+### Current workbench
+
+These screenshots use the bundled synthetic environment and the sample candidate
+specification; the dashboard counts are recorded demo results.
+
+<table>
+  <tr>
+    <td width="50%"><a href="docs/media/workbench-matrix.jpg"><img src="docs/media/workbench-matrix.jpg" alt="Workbench permission matrix with eight reviewed checks" /></a><p align="center"><sub><b>Permission matrix</b> — identities, tenant scopes, expected statuses, and assertions</sub></p></td>
+    <td width="50%"><a href="docs/media/workbench-runs.jpg"><img src="docs/media/workbench-runs.jpg" alt="Runs dashboard showing two completed executions, outcome history, and recovery status" /></a><p align="center"><sub><b>Execution control</b> — durable run history, live status, and recovery visibility</sub></p></td>
+  </tr>
+  <tr>
+    <td colspan="2"><a href="docs/media/workbench-impact.jpg"><img src="docs/media/workbench-impact.jpg" width="708" alt="Authorization impact report tracing an asset-read security scheme change to five permission checks and a new search coverage gap" /></a><p align="center"><sub><b>Change impact</b> — explain affected dependencies and checks before reviewing the next revision</sub></p></td>
+  </tr>
+</table>
+
+### Guided demo and landing page
 
 <table>
   <tr>
@@ -291,7 +365,7 @@ This repository dogfoods it: [`.github/workflows/ruleproof.yml`](.github/workflo
   </tr>
   <tr>
     <td><a href="docs/media/landing-features.png"><img src="docs/media/landing-features.png" alt="Feature overview" /></a><p align="center"><sub><b>Features</b> — built for evidence</sub></p></td>
-    <td><a href="docs/media/landing-architecture.png"><img src="docs/media/landing-architecture.png" alt="Architecture section" /></a><p align="center"><sub><b>Architecture</b> — one Go binary, two fixtures, one static UI</sub></p></td>
+    <td><a href="docs/media/landing-architecture.png"><img src="docs/media/landing-architecture.png" alt="Architecture section" /></a><p align="center"><sub><b>Architecture</b> — one Go binary, three fixtures, one static UI</sub></p></td>
   </tr>
 </table>
 
@@ -309,7 +383,11 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000 for the landing page and interactive sample, and http://localhost:3000/studio/ for the Evidence Studio. Approve the sample rule, then switch between **Seeded defect** and **Corrected** to see the leak and its fix.
+Open http://localhost:3000 for the landing page and interactive sample, and http://localhost:3000/studio/ for Studio. Choose **Workbench** for configurable suites, **Runs** for execution control, and **Change impact** for candidate-spec analysis. The **Checks** guided demo lets you approve a sample rule and compare the **Seeded defect** and **Corrected** fixtures.
+
+Without configuration, Workbench uses synthetic fixtures and a local demo reviewer.
+For workspace accounts, separate reviewers, and custom test APIs, follow the
+[team configuration guide](docs/specs/authorization-workbench.md#configure-a-team-workspace).
 
 > If Turbopack cannot start its CSS worker on Windows, use `npx next dev --webpack` (or `npx next build --webpack`) from `web/`.
 
@@ -329,7 +407,9 @@ docker build -t ruleproof .
 docker run -p 8080:8080 ruleproof
 ```
 
-Any container host works (Render, Fly.io, Railway). The server listens on `$PORT` when set. SQLite lives in `/tmp` inside the container, so demo data resets on restart — intended for a public demo.
+The server listens on `$PORT` when set. SQLite lives in `/tmp` inside the default
+container, so demo data resets on restart. Use PostgreSQL or a persistent SQLite
+volume when retaining approved suites, audit history, and execution receipts.
 
 ### Postgres
 
@@ -340,10 +420,21 @@ DATABASE_URL=postgres://user:password@localhost:5432/ruleproof go run ./cmd/serv
 ### Tests
 
 ```sh
-go test ./...               # backend: store, api, rules, assets, check, bypass, diff, coverage, ci
-cd web && npx tsc --noEmit  # frontend typecheck
-cd web && npx eslint .      # frontend lint
+go test -race ./internal/... ./cmd/...
+go vet ./internal/... ./cmd/...
+cd web
+npm run format:check
+npm run typecheck           # generates Next.js types before checking TypeScript
+npm run lint
+npm test
+npm run build
 ```
+
+CI also runs the persistence tests against PostgreSQL. To include them locally,
+set `RULEPROOF_TEST_POSTGRES` to a dedicated PostgreSQL test database DSN. Frontend
+checks enforce Airbnb/Next ESLint, arrow functions, and the 200-line source-file
+limit. Shared constants live in `web/constants/`; formatting follows EditorConfig
+and Prettier.
 
 ## Architecture
 
@@ -352,9 +443,10 @@ Browser (Next.js 16 static export · React 19 · Tailwind v4 · GSAP · Radix UI
    │  same origin
    ▼
 cmd/server (Go)
-   ├── internal/api     REST surface, structured JSON errors
+   ├── internal/api     workspace access, REST handlers, durable execution workers
+   ├── internal/workbench  suite validation, assertions, spec drift, impact analysis
    ├── internal/rules   bounded, sentence-scoped rule parser
-   ├── internal/store   immutable plans + runs, versioned migrations (SQLite or Postgres via sqlx)
+   ├── internal/store   revisions, audit events, runs, environment reservations, migrations
    ├── internal/diff    revision diff: wording, expectations, assumptions
    ├── internal/coverage  rule → OpenAPI endpoint coverage and gaps
    ├── internal/bypass  run-time bypass variants of every denied check
@@ -367,20 +459,22 @@ internal/assets — synthetic asset API, started three times:
    └── corrected      checks tenant ownership on every request
 ```
 
-| Package | Responsibility |
-|---|---|
-| `internal/rules` | Turns reviewed text into an 8-case plan (12 when the rule mentions export) using a fixed vocabulary. Out-of-vocabulary wording becomes an assumption; every concept keeps its source sentence. |
-| `internal/assets` | Project/tenant-scoped asset API (read, update, export) with its OpenAPI spec and `fixed`, `partial` and `broken` modes, so a UI-hidden action can still be bypassed at the API. |
-| `internal/bypass` | Derives bypass attempts from an approved plan's deny cases at run time. Versioned catalog; never changes the approved plan. |
-| `internal/check` | Issues approved requests with timeouts and exact status matching, and captures the synthetic response body. Credentials are never captured. |
-| `internal/store` | Immutable plans linked into a lineage; runs (and their bypass attempts) replayable across the revision history. Schema changes are versioned migrations recorded in `schema_migrations`. |
-| `internal/api` | explain → revise → edit → acknowledge → approve → run → history → export → report. |
-| `internal/diff` | Compares two revisions: phrase-level wording diff, changed/added/removed cases, assumptions and concepts, approval reset. |
-| `internal/coverage` | Maps a plan onto an OpenAPI spec: covered object-level operations with their source sentence, and uncovered ones with a suggested sentence. |
-| `cmd/ruleproof-ci` | CI gate: verifies an approved, untampered plan, runs it, fails the build on any mismatch. |
-| `cmd/ruleproof` | The original standalone CLI demo (invoice-tenant fixture), Go only. |
+| Package               | Responsibility                                                                                                                                                                                                                                              |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `internal/rules`      | Turns reviewed text into an 8-case plan (12 when the rule mentions export) using a fixed vocabulary. Out-of-vocabulary wording becomes an assumption; every concept keeps its source sentence.                                                              |
+| `internal/assets`     | Project/tenant-scoped asset API (read, update, export) with its OpenAPI spec and `fixed`, `partial` and `broken` modes, so a UI-hidden action can still be bypassed at the API.                                                                             |
+| `internal/bypass`     | Derives bypass attempts from an approved plan's deny cases at run time. Versioned catalog; never changes the approved plan.                                                                                                                                 |
+| `internal/check`      | Issues approved requests with timeouts and exact status matching, and captures the synthetic response body. Credentials are never captured.                                                                                                                 |
+| `internal/workbench`  | Validates suites, resolves operation coverage, runs ordered cases and state assertions, compares specifications, and maps changes to affected checks. Impact parsing, references, security inheritance, coverage, and recommendations are separate modules. |
+| `internal/store`      | Immutable plans and suite revisions, audit events, durable execution receipts, checkpoints, and environment reservations. SQLite and PostgreSQL share versioned migrations.                                                                                 |
+| `internal/api`        | Workspace-scoped workbench access, revision review, impact reports, execution admission, cancellation, recovery, and the separate guided demo routes.                                                                                                       |
+| `internal/diff`       | Compares two revisions: phrase-level wording diff, changed/added/removed cases, assumptions and concepts, approval reset.                                                                                                                                   |
+| `internal/coverage`   | Maps a plan onto an OpenAPI spec: covered object-level operations with their source sentence, and uncovered ones with a suggested sentence.                                                                                                                 |
+| `cmd/ruleproof-ci`    | CI gate: verifies an approved, untampered plan, runs it, fails the build on any mismatch.                                                                                                                                                                   |
+| `cmd/ruleproof-suite` | Runs an exported approved workbench suite against a configured CI target, resolves credential references, checks OpenAPI drift, and emits JUnit evidence.                                                                                                   |
+| `cmd/ruleproof`       | The original standalone CLI demo (invoice-tenant fixture), Go only.                                                                                                                                                                                         |
 
-### Plan lifecycle
+### Guided demo plan lifecycle
 
 A revision never changes after it is created. Rewording a rule or editing an expectation makes a new child revision, which starts unapproved, so an approval always refers to exactly what was reviewed.
 
@@ -403,7 +497,7 @@ stateDiagram-v2
     end note
 ```
 
-### Data model
+### Guided demo data model
 
 ```mermaid
 erDiagram
@@ -444,6 +538,30 @@ erDiagram
 
 Schema changes are append-only migrations in [`internal/store/store.go`](internal/store/store.go), applied in a transaction and recorded in `schema_migrations`, so databases created by older versions upgrade on start.
 
+### Workbench storage and execution
+
+`suite_revisions` stores immutable contracts and approval provenance;
+`suite_events` records review, execution, cancellation, and recovery events.
+`executions` stores durable status, the current case, redacted evidence, compact
+dashboard summaries, and deadlines. `execution_reservations` enforces one active
+reservation per workspace/environment across database connections.
+
+```mermaid
+flowchart LR
+    S[Saved revision] --> A[Exact revision approved]
+    A --> R[Request key and environment reservation]
+    R --> E[202 execution receipt]
+    E --> W[Detached worker checkpoints evidence]
+    W --> C{Outcome known?}
+    C -- Completed --> D[Commit evidence and release reservation]
+    C -- Interrupted or cancelled --> Q[Keep reservation for reviewer recovery]
+    Q --> V[Verify target state and stop former worker]
+    V --> N[Record recovery after deadline and release]
+```
+
+Impact analysis is a read-only operation over the saved contract and candidate
+specification. It does not reserve a target, execute checks, or modify approvals.
+
 ### Project structure
 
 <details>
@@ -454,19 +572,24 @@ ruleproof/
 ├── cmd/
 │   ├── server/          API + three fixture APIs + static UI, one process
 │   ├── ruleproof-ci/    CI gate (approved-plan runner, JUnit, GitHub annotations)
+│   ├── ruleproof-suite/ Workbench suite runner, credential references, spec drift, JUnit
 │   └── ruleproof/       original standalone CLI demo
 ├── internal/
 │   ├── api/             REST handlers and JSON errors
 │   ├── rules/           bounded rule parser and plan hash
-│   ├── store/           plans, runs, migrations (SQLite or Postgres)
+│   ├── workbench/       suite validation, coverage, ordered execution, drift and impact
+│   ├── store/           plans, suite revisions, audit, durable runs, reservations, migrations
 │   ├── check/           HTTP runner and verdicts
 │   ├── bypass/          bypass variant catalog
 │   ├── coverage/        rule → OpenAPI coverage
 │   ├── diff/            revision diff
 │   ├── assets/          synthetic asset API + OpenAPI spec
 │   └── demo/            fixtures for the standalone CLI
-├── web/                 Next.js studio and landing page (static export)
-├── examples/            approved evidence bundles used by CI
+├── web/
+│   ├── components/workbench/  focused editors, run dashboard, impact upload and results
+│   ├── hooks/workbench/       revision, analysis, request, and execution state
+│   └── constants/            shared frontend constants
+├── examples/            approved CI bundles and an impact-analysis candidate spec
 ├── docs/                specs and README media
 └── .github/             CI workflow and PR template
 ```
@@ -475,31 +598,7 @@ ruleproof/
 
 **Frontend:** Next.js 16 + TypeScript, styled entirely with Tailwind CSS v4 utilities and theme tokens. Radix UI primitives (select, tabs, accordion), `class-variance-authority` + `tailwind-merge` for variants, GSAP (ScrollTrigger, SplitText, Flip) and Lenis for motion, `@number-flow/react` for animated counts, Lucide icons. All motion respects `prefers-reduced-motion`, and the layout works from 1440px down to 375px.
 
-## API
-
-| Method | Endpoint | Purpose |
-|---|---|---|
-| `GET` | `/api/health` | Health and storage driver |
-| `POST` | `/api/plans` | Parse a rule into a new plan |
-| `GET` | `/api/plans/{id}` | Fetch a plan revision |
-| `POST` | `/api/plans/{id}/revise` | New revision from changed wording |
-| `PATCH` | `/api/plans/{id}/cases` | Override expectations → new revision |
-| `POST` | `/api/plans/{id}/acknowledge` | Acknowledge parser assumptions |
-| `POST` | `/api/plans/{id}/approve` | Approve this exact revision |
-| `POST` | `/api/runs` | Run an approved plan against `broken`, `partial` or `fixed`; `"bypass": true` adds bypass variants |
-| `GET` | `/api/runs/{id}` | Fetch a run with evidence (the `/report/?run=<id>` page is built on this) |
-| `GET` | `/api/plans/{id}/history` | Full lineage and every run |
-| `GET` | `/api/plans/{id}/diff` | What changed vs. the parent, or `?base=<id>` |
-| `GET` | `/api/plans/{id}/coverage` | Which spec endpoints the plan covers, and suggested sentences for the gaps |
-| `GET` | `/api/fixtures/openapi.json` | The fixture's OpenAPI spec |
-| `GET` | `/api/plans/{id}/export` | Download the evidence bundle |
-
-```sh
-curl -X POST localhost:8080/api/plans \
-  -d '{"text":"Viewers can read assets in their own tenant."}'
-```
-
-## Product contract
+## Guided demo contract
 
 1. The user explains the rule in plain language (no simulated microphone UI — dictate into the normal textarea with Wispr Flow, or type).
 2. The bounded parser proposes a matrix and lists any assumptions; assumptions must be acknowledged before approval.
@@ -523,7 +622,7 @@ A passing matrix means **the approved scenarios passed**. It does not prove the 
 **Before opening a PR,** run the same checks CI does:
 
 ```sh
-go vet ./... && go test ./...
+go vet ./internal/... ./cmd/... && go test -race ./internal/... ./cmd/...
 cd web && npm run format:check && npm run typecheck && npm run lint && npm test && npm run build
 ```
 
@@ -531,13 +630,13 @@ The [PR template](.github/pull_request_template.md) carries the product checklis
 
 **Labels.** Every PR and issue gets one `type:` label, one or more `area:` labels for the packages it touches, and a `priority:` when it matters for the deadline.
 
-| Group | Labels |
-|---|---|
-| Type | `type: feature` `type: bug` `type: enhancement` `type: security` `type: docs` `type: refactor` `type: test` `type: chore` |
-| Area | `area: parser` `area: runner` `area: bypass` `area: coverage` `area: diff` `area: store` `area: api` `area: fixtures` `area: ci-gate` `area: studio` `area: landing` |
-| Priority | `priority: critical` `priority: high` `priority: low` |
-| Status | `status: needs triage` `status: in progress` `status: blocked` |
-| Project | `hackathon` `demo` `wispr` `post-mvp` `good first issue` `help wanted` |
+| Group    | Labels                                                                                                                                                               |
+| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Type     | `type: feature` `type: bug` `type: enhancement` `type: security` `type: docs` `type: refactor` `type: test` `type: chore`                                            |
+| Area     | `area: parser` `area: runner` `area: bypass` `area: coverage` `area: diff` `area: store` `area: api` `area: fixtures` `area: ci-gate` `area: studio` `area: landing` |
+| Priority | `priority: critical` `priority: high` `priority: low`                                                                                                                |
+| Status   | `status: needs triage` `status: in progress` `status: blocked`                                                                                                       |
+| Project  | `hackathon` `demo` `wispr` `post-mvp` `good first issue` `help wanted`                                                                                               |
 
 ## Two-minute demo outline
 

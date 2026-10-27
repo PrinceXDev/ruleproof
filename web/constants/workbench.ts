@@ -1,4 +1,11 @@
-export const WORKBENCH_TABS = ['Checks', 'API coverage', 'Identities', 'Runs', 'Activity'] as const;
+export const WORKBENCH_TABS = [
+  'Checks',
+  'API coverage',
+  'Change impact',
+  'Identities',
+  'Runs',
+  'Activity',
+] as const;
 export type WorkbenchTab = (typeof WORKBENCH_TABS)[number];
 
 export const HTTP_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'] as const;

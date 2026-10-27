@@ -11,6 +11,7 @@ import WorkbenchSummary from './WorkbenchSummary';
 import CheckEditor from './CheckEditor';
 import Identities from './Identities';
 import Coverage from './Coverage';
+import ChangeImpact from './ChangeImpact';
 import RevisionActivity from './RevisionActivity';
 import Executions from './Executions';
 
@@ -93,6 +94,14 @@ const WorkbenchContent = ({ token, session, signOut }: Props) => {
         />
       )}
       {tab === 'Runs' && <Executions token={token} session={session} />}
+      {tab === 'Change impact' && (
+        <ChangeImpact
+          key={model.revision?.id ?? 'draft'}
+          token={token}
+          revision={model.revision}
+          dirty={model.dirty}
+        />
+      )}
       {tab === 'Activity' && (
         <RevisionActivity key={model.revision?.id} token={token} revisionId={model.revision?.id} />
       )}

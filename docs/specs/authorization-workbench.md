@@ -105,6 +105,47 @@ authorized target URL, so confirm it corresponds to the bundle's environment.
 
 ## Verification
 
+### Authorization impact analysis
+
+In **Change impact**, upload a candidate OpenAPI 3 JSON document against a saved
+revision. The advisory report identifies added, changed, removed, and unchanged
+operations, then maps them to identities, scopes, response assertions, protected
+state observers, and ordered scenarios. It does not execute requests, change the
+saved suite, grant approval, or enable partial runs. Viewers may analyze contracts
+within their workspace. Unsaved edits must be saved or discarded first.
+
+`POST /api/workbench/revisions/{id}/impact` accepts `{ "spec": { ... } }` and returns
+the baseline suite hash, both specification hashes, explanations, recommendations,
+orphaned check IDs, and candidate coverage gaps. Export the report from the UI to
+keep that provenance with a code review. Credentials and request/response bodies
+are not included in the report.
+
+The analyzer follows transitive local `#/components/` references with cycle
+detection. It resolves effective root/operation security and root/path/operation
+servers, and follows security scheme names even where OpenAPI uses no `$ref`.
+Unused component edits do not implicate unrelated operations. Changes to shared
+path settings affect sibling operations. Literal-route additions can remap an
+existing concrete request. A changed observer GET also implicates the protected
+mutation, and every step in its named scenario stays in the review plan.
+
+Unclassified document settings, unexpanded path-item references, unresolved
+security mappings, and changes involving callbacks, links, or dynamic schema
+references broaden review to the complete suite. Removed request/observer routes
+need repair. Changed exclusions require renewed review. Missing identity × scope
+combinations are counted independently of exclusions; reports include up to 32
+examples per operation and up to eight changed dependency references. UI operation
+lists expand in pages of 20. Existing document/operation/case limits apply.
+
+“Unchanged in spec” does not establish runtime safety: implementation-only changes
+are outside this analyzer. Review and execute the full approved suite before
+release. To adopt the candidate, import it and save an unapproved revision through
+the normal workflow; no approval is carried forward.
+
+For a local walkthrough, compare the synthetic tenant suite with
+`examples/tenant-isolation-impact.openapi.json`. It introduces explicit bearer
+authentication for asset reads and an uncovered asset-search operation. The
+report includes the write check whose state observer depends on asset reads.
+
 ### Durable execution and operational dashboard
 
 `POST /api/workbench/revisions/{id}/run` now returns **202** with an execution
