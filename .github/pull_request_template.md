@@ -26,8 +26,8 @@
 ## Checklist
 
 - [ ] `go test ./...` passes
-- [ ] `cd web && npx tsc --noEmit` passes
-- [ ] `cd web && npx eslint .` passes
+- [ ] `cd web && npm run typecheck` passes (generates Next.js types first)
+- [ ] `cd web && npm run lint` passes
 - [ ] `cd web && npm run build` succeeds
 - [ ] Approved plans still can't change silently (any edit creates a new revision that needs approval)
 - [ ] Execution targets only bundled fixtures or operator-configured Workbench environments

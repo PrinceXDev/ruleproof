@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import type { ReactNode } from 'react';
 import { Geist, Geist_Mono as GeistMono } from 'next/font/google';
 import './globals.css';
 
@@ -18,7 +19,7 @@ export const metadata: Metadata = {
     'Speak an access rule, review the test cases it produces, and verify what the API actually enforces.',
 };
 
-const RootLayout = ({ children }: LayoutProps<'/'>) => (
+const RootLayout = ({ children }: { children: ReactNode }) => (
   <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
     <body>{children}</body>
   </html>

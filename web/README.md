@@ -32,6 +32,9 @@ npm run build
 ```
 
 CI runs each command. `npm run format` and `npm run lint:fix` apply mechanical fixes.
+`npm run typecheck` generates Next.js route types before running TypeScript, so it
+works on a fresh checkout without a prior dev session or production build. Use this
+command instead of invoking `tsc` directly; generated types remain Git-ignored.
 The Node tests exercise revision transitions and the API request boundary. Backend
 tests cover approvals, workspace isolation, execution, redaction, and persistence.
 

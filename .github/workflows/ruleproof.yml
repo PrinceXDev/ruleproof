@@ -91,6 +91,7 @@ jobs:
       - run: npm ci
       - run: npm run format:check
       - run: npm test
-      - run: npx tsc --noEmit
-      - run: npx eslint . --max-warnings 0
-      - run: npx next build --webpack
+      - name: Generate Next.js types and check TypeScript
+        run: npm run typecheck
+      - run: npm run lint
+      - run: npm run build
