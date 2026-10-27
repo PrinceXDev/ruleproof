@@ -112,10 +112,12 @@ func Open(dsn string) (*Store, error) {
 		db.SetMaxOpenConns(1) // modernc.org/sqlite: keep writes serialized, simplest correct option for this scale
 	}
 	if err := db.Ping(); err != nil {
+		db.Close()
 		return nil, err
 	}
 	s := &Store{db: db, driver: driver}
 	if err := s.migrate(); err != nil {
+		db.Close()
 		return nil, err
 	}
 	return s, nil
@@ -170,39 +172,45 @@ var migrations = [][]string{
 		`CREATE INDEX idx_suite_workspace ON suite_revisions(workspace, created_at)`,
 		`CREATE TABLE suite_events (id TEXT PRIMARY KEY, workspace TEXT NOT NULL, revision_id TEXT NOT NULL REFERENCES suite_revisions(id), actor TEXT NOT NULL, kind TEXT NOT NULL, content TEXT NOT NULL, created_at TEXT NOT NULL)`,
 		`CREATE INDEX idx_suite_events ON suite_events(workspace, revision_id, created_at)`},
+	{`CREATE TABLE executions (id TEXT PRIMARY KEY, workspace TEXT NOT NULL, revision_id TEXT NOT NULL REFERENCES suite_revisions(id), environment TEXT NOT NULL, actor TEXT NOT NULL, request_key TEXT NOT NULL, status TEXT NOT NULL, current_case TEXT NOT NULL, evidence TEXT NOT NULL, summary TEXT NOT NULL, created_at TEXT NOT NULL, deadline BIGINT NOT NULL, recovery_required INTEGER NOT NULL, UNIQUE(workspace, actor, request_key))`,
+		`CREATE INDEX idx_executions_workspace ON executions(workspace, created_at)`,
+		`CREATE TABLE execution_reservations (workspace TEXT NOT NULL, environment TEXT NOT NULL, execution_id TEXT NOT NULL REFERENCES executions(id), PRIMARY KEY(workspace, environment))`},
 }
 
+// migrate serializes startup across replicas. PostgreSQL uses an advisory
+// transaction lock; SQLite obtains a write lock before reading the version.
 func (s *Store) migrate() error {
-	if _, err := s.db.Exec(`CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL)`); err != nil {
-		return fmt.Errorf("migrate: %w", err)
-	}
-	current, err := s.SchemaVersion(context.Background())
-	if err != nil {
-		return fmt.Errorf("migrate: read version: %w", err)
-	}
-	for i := current; i < len(migrations); i++ {
-		if err := s.applyMigration(i+1, migrations[i]); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// applyMigration runs one version in a transaction (DDL is transactional on
-// both engines), so a failed step leaves the version unrecorded and retryable.
-func (s *Store) applyMigration(version int, stmts []string) error {
 	tx, err := s.db.Beginx()
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
-	for _, stmt := range stmts {
-		if _, err := tx.Exec(stmt); err != nil {
-			return fmt.Errorf("migrate %d: %s: %w", version, stmt, err)
+	if s.driver == "pgx" {
+		if _, err := tx.Exec(`SELECT pg_advisory_xact_lock(90417001)`); err != nil {
+			return err
 		}
 	}
-	if _, err := tx.Exec(s.db.Rebind(`INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)`), version, time.Now().UTC().Format(time.RFC3339Nano)); err != nil {
-		return fmt.Errorf("migrate %d: %w", version, err)
+	if _, err := tx.Exec(`CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL)`); err != nil {
+		return fmt.Errorf("migrate: %w", err)
+	}
+	if s.driver == "sqlite" {
+		if _, err := tx.Exec(`UPDATE schema_migrations SET applied_at=applied_at WHERE 1=0`); err != nil {
+			return err
+		}
+	}
+	var current int
+	if err := tx.Get(&current, `SELECT COALESCE(MAX(version),0) FROM schema_migrations`); err != nil {
+		return err
+	}
+	for i := current; i < len(migrations); i++ {
+		for _, stmt := range migrations[i] {
+			if _, err := tx.Exec(stmt); err != nil {
+				return fmt.Errorf("migrate %d: %w", i+1, err)
+			}
+		}
+		if _, err := tx.Exec(s.db.Rebind(`INSERT INTO schema_migrations (version,applied_at) VALUES (?,?)`), i+1, time.Now().UTC().Format(time.RFC3339Nano)); err != nil {
+			return err
+		}
 	}
 	return tx.Commit()
 }

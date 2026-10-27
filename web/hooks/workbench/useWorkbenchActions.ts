@@ -1,19 +1,15 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import {
-  downloadJSON,
-  workbenchRequest,
-  type AuditEvent,
-  type Drift,
-  type Revision,
-} from '@/lib/workbench';
+import { downloadJSON, workbenchRequest, type Drift, type Revision } from '@/lib/workbench';
+import type { Execution } from '@/lib/executions';
 import type useSuiteRevision from './useSuiteRevision';
 
 const useWorkbenchActions = (token: string, draft: ReturnType<typeof useSuiteRevision>) => {
   const [status, setStatus] = useState({ busy: '', error: '', notice: '' });
   const [drift, setDrift] = useState<Drift | null>(null);
   const active = useRef(false);
+  const pendingRun = useRef<{ revision: string; key: string } | null>(null);
   const request = <T>(path: string, body?: unknown) => workbenchRequest<T>(token, path, body);
   const perform = async (name: string, job: () => Promise<string>) => {
     if (active.current) return;
@@ -51,10 +47,15 @@ const useWorkbenchActions = (token: string, draft: ReturnType<typeof useSuiteRev
     });
   const run = (onComplete: () => void) =>
     perform('Running checks', async () => {
-      const event = await request<AuditEvent>(`revisions/${draft.revision!.id}/run`, {});
-      draft.ran(event);
+      const revision = draft.revision!.id;
+      if (pendingRun.current?.revision !== revision)
+        pendingRun.current = { revision, key: crypto.randomUUID() };
+      await request<Execution>(`revisions/${revision}/run`, {
+        requestKey: pendingRun.current.key,
+      });
+      pendingRun.current = null;
       onComplete();
-      return 'Execution recorded. Inspect each result below.';
+      return 'Execution accepted. It continues if you close this page. Track progress in Runs.';
     });
   const exportBundle = () =>
     perform('Exporting', async () => {
