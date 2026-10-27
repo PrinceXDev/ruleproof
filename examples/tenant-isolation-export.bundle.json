@@ -1,186 +1,186 @@
 {
-    "disclaimer": "A passing result means the approved scenarios passed. It does not prove the whole application is secure.",
-    "exportedAt": "2026-10-26T06:29:28.7852222Z",
-    "plan": {
-        "id": "ccfcec1d-8661-4c31-92ef-758c9fc941a5",
-        "rootPlanId": "78285b7f-6c6e-4f33-9c61-340fdcc9651f",
-        "parentPlanId": "78285b7f-6c6e-4f33-9c61-340fdcc9651f",
-        "kind": "revision",
-        "ruleText": "Viewers can read assets in their own tenant. Editors can also update them. Neither role can access another tenant's assets. Both roles can export assets in their own tenant. Neither role can export another tenant's assets.",
-        "cases": [
-            {
-                "id": "editor-a-read-a1",
-                "actor": "Editor \u00c2\u00b7 tenant A",
-                "role": "editor",
-                "action": "read",
-                "method": "GET",
-                "scope": "own",
-                "assetId": "a1",
-                "assetOwner": "A",
-                "expectedStatus": 200,
-                "expectedLabel": "allow"
-            },
-            {
-                "id": "editor-a-update-a1",
-                "actor": "Editor \u00c2\u00b7 tenant A",
-                "role": "editor",
-                "action": "update",
-                "method": "PUT",
-                "scope": "own",
-                "assetId": "a1",
-                "assetOwner": "A",
-                "expectedStatus": 200,
-                "expectedLabel": "allow"
-            },
-            {
-                "id": "editor-a-export-a1",
-                "actor": "Editor \u00c2\u00b7 tenant A",
-                "role": "editor",
-                "action": "export",
-                "method": "GET",
-                "scope": "own",
-                "assetId": "a1",
-                "assetOwner": "A",
-                "expectedStatus": 200,
-                "expectedLabel": "allow"
-            },
-            {
-                "id": "editor-a-read-b1",
-                "actor": "Editor \u00c2\u00b7 tenant A",
-                "role": "editor",
-                "action": "read",
-                "method": "GET",
-                "scope": "other",
-                "assetId": "b1",
-                "assetOwner": "B",
-                "expectedStatus": 403,
-                "expectedLabel": "deny"
-            },
-            {
-                "id": "editor-a-update-b1",
-                "actor": "Editor \u00c2\u00b7 tenant A",
-                "role": "editor",
-                "action": "update",
-                "method": "PUT",
-                "scope": "other",
-                "assetId": "b1",
-                "assetOwner": "B",
-                "expectedStatus": 403,
-                "expectedLabel": "deny"
-            },
-            {
-                "id": "editor-a-export-b1",
-                "actor": "Editor \u00c2\u00b7 tenant A",
-                "role": "editor",
-                "action": "export",
-                "method": "GET",
-                "scope": "other",
-                "assetId": "b1",
-                "assetOwner": "B",
-                "expectedStatus": 403,
-                "expectedLabel": "deny"
-            },
-            {
-                "id": "viewer-a-read-a1",
-                "actor": "Viewer \u00c2\u00b7 tenant A",
-                "role": "viewer",
-                "action": "read",
-                "method": "GET",
-                "scope": "own",
-                "assetId": "a1",
-                "assetOwner": "A",
-                "expectedStatus": 200,
-                "expectedLabel": "allow"
-            },
-            {
-                "id": "viewer-a-update-a1",
-                "actor": "Viewer \u00c2\u00b7 tenant A",
-                "role": "viewer",
-                "action": "update",
-                "method": "PUT",
-                "scope": "own",
-                "assetId": "a1",
-                "assetOwner": "A",
-                "expectedStatus": 403,
-                "expectedLabel": "deny"
-            },
-            {
-                "id": "viewer-a-export-a1",
-                "actor": "Viewer \u00c2\u00b7 tenant A",
-                "role": "viewer",
-                "action": "export",
-                "method": "GET",
-                "scope": "own",
-                "assetId": "a1",
-                "assetOwner": "A",
-                "expectedStatus": 200,
-                "expectedLabel": "allow"
-            },
-            {
-                "id": "viewer-a-read-b1",
-                "actor": "Viewer \u00c2\u00b7 tenant A",
-                "role": "viewer",
-                "action": "read",
-                "method": "GET",
-                "scope": "other",
-                "assetId": "b1",
-                "assetOwner": "B",
-                "expectedStatus": 403,
-                "expectedLabel": "deny"
-            },
-            {
-                "id": "viewer-a-update-b1",
-                "actor": "Viewer \u00c2\u00b7 tenant A",
-                "role": "viewer",
-                "action": "update",
-                "method": "PUT",
-                "scope": "other",
-                "assetId": "b1",
-                "assetOwner": "B",
-                "expectedStatus": 403,
-                "expectedLabel": "deny"
-            },
-            {
-                "id": "viewer-a-export-b1",
-                "actor": "Viewer \u00c2\u00b7 tenant A",
-                "role": "viewer",
-                "action": "export",
-                "method": "GET",
-                "scope": "other",
-                "assetId": "b1",
-                "assetOwner": "B",
-                "expectedStatus": 403,
-                "expectedLabel": "deny"
-            }
-        ],
-        "assumptions": null,
-        "concepts": [
-            {
-                "label": "Editors",
-                "value": "can update",
-                "snippet": "Editors can also update them."
-            },
-            {
-                "label": "Viewers",
-                "value": "cannot update",
-                "snippet": "Viewers can read assets in their own tenant."
-            },
-            {
-                "label": "Cross-tenant access",
-                "value": "always denied",
-                "snippet": "Viewers can read assets in their own tenant."
-            },
-            {
-                "label": "Export",
-                "value": "cross-tenant denied",
-                "snippet": "Both roles can export assets in their own tenant."
-            }
-        ],
-        "hash": "b96d95b3bc297a78",
-        "assumptionsAcknowledged": false,
-        "approved": true,
-        "approvedAt": "2026-10-26T06:28:37.1721971Z",
-        "createdAt": "2026-10-26T06:28:35.6619549Z"
-    },
-    "runs": null
+  "disclaimer": "A passing result means the approved scenarios passed. It does not prove the whole application is secure.",
+  "exportedAt": "2026-10-26T06:29:28.7852222Z",
+  "plan": {
+    "approved": true,
+    "approvedAt": "2026-10-26T06:28:37.1721971Z",
+    "assumptions": null,
+    "assumptionsAcknowledged": false,
+    "cases": [
+      {
+        "id": "editor-a-read-a1",
+        "actor": "Editor \u00c2\u00b7 tenant A",
+        "role": "editor",
+        "action": "read",
+        "method": "GET",
+        "scope": "own",
+        "assetId": "a1",
+        "assetOwner": "A",
+        "expectedStatus": 200,
+        "expectedLabel": "allow"
+      },
+      {
+        "id": "editor-a-update-a1",
+        "actor": "Editor \u00c2\u00b7 tenant A",
+        "role": "editor",
+        "action": "update",
+        "method": "PUT",
+        "scope": "own",
+        "assetId": "a1",
+        "assetOwner": "A",
+        "expectedStatus": 200,
+        "expectedLabel": "allow"
+      },
+      {
+        "id": "editor-a-export-a1",
+        "actor": "Editor \u00c2\u00b7 tenant A",
+        "role": "editor",
+        "action": "export",
+        "method": "GET",
+        "scope": "own",
+        "assetId": "a1",
+        "assetOwner": "A",
+        "expectedStatus": 200,
+        "expectedLabel": "allow"
+      },
+      {
+        "id": "editor-a-read-b1",
+        "actor": "Editor \u00c2\u00b7 tenant A",
+        "role": "editor",
+        "action": "read",
+        "method": "GET",
+        "scope": "other",
+        "assetId": "b1",
+        "assetOwner": "B",
+        "expectedStatus": 403,
+        "expectedLabel": "deny"
+      },
+      {
+        "id": "editor-a-update-b1",
+        "actor": "Editor \u00c2\u00b7 tenant A",
+        "role": "editor",
+        "action": "update",
+        "method": "PUT",
+        "scope": "other",
+        "assetId": "b1",
+        "assetOwner": "B",
+        "expectedStatus": 403,
+        "expectedLabel": "deny"
+      },
+      {
+        "id": "editor-a-export-b1",
+        "actor": "Editor \u00c2\u00b7 tenant A",
+        "role": "editor",
+        "action": "export",
+        "method": "GET",
+        "scope": "other",
+        "assetId": "b1",
+        "assetOwner": "B",
+        "expectedStatus": 403,
+        "expectedLabel": "deny"
+      },
+      {
+        "id": "viewer-a-read-a1",
+        "actor": "Viewer \u00c2\u00b7 tenant A",
+        "role": "viewer",
+        "action": "read",
+        "method": "GET",
+        "scope": "own",
+        "assetId": "a1",
+        "assetOwner": "A",
+        "expectedStatus": 200,
+        "expectedLabel": "allow"
+      },
+      {
+        "id": "viewer-a-update-a1",
+        "actor": "Viewer \u00c2\u00b7 tenant A",
+        "role": "viewer",
+        "action": "update",
+        "method": "PUT",
+        "scope": "own",
+        "assetId": "a1",
+        "assetOwner": "A",
+        "expectedStatus": 403,
+        "expectedLabel": "deny"
+      },
+      {
+        "id": "viewer-a-export-a1",
+        "actor": "Viewer \u00c2\u00b7 tenant A",
+        "role": "viewer",
+        "action": "export",
+        "method": "GET",
+        "scope": "own",
+        "assetId": "a1",
+        "assetOwner": "A",
+        "expectedStatus": 200,
+        "expectedLabel": "allow"
+      },
+      {
+        "id": "viewer-a-read-b1",
+        "actor": "Viewer \u00c2\u00b7 tenant A",
+        "role": "viewer",
+        "action": "read",
+        "method": "GET",
+        "scope": "other",
+        "assetId": "b1",
+        "assetOwner": "B",
+        "expectedStatus": 403,
+        "expectedLabel": "deny"
+      },
+      {
+        "id": "viewer-a-update-b1",
+        "actor": "Viewer \u00c2\u00b7 tenant A",
+        "role": "viewer",
+        "action": "update",
+        "method": "PUT",
+        "scope": "other",
+        "assetId": "b1",
+        "assetOwner": "B",
+        "expectedStatus": 403,
+        "expectedLabel": "deny"
+      },
+      {
+        "id": "viewer-a-export-b1",
+        "actor": "Viewer \u00c2\u00b7 tenant A",
+        "role": "viewer",
+        "action": "export",
+        "method": "GET",
+        "scope": "other",
+        "assetId": "b1",
+        "assetOwner": "B",
+        "expectedStatus": 403,
+        "expectedLabel": "deny"
+      }
+    ],
+    "concepts": [
+      {
+        "label": "Editors",
+        "value": "can update",
+        "snippet": "Editors can also update them."
+      },
+      {
+        "label": "Viewers",
+        "value": "cannot update",
+        "snippet": "Viewers can read assets in their own tenant."
+      },
+      {
+        "label": "Cross-tenant access",
+        "value": "always denied",
+        "snippet": "Viewers can read assets in their own tenant."
+      },
+      {
+        "label": "Export",
+        "value": "cross-tenant denied",
+        "snippet": "Both roles can export assets in their own tenant."
+      }
+    ],
+    "createdAt": "2026-10-26T06:28:35.6619549Z",
+    "hash": "60d0d23e29574a10d201ed70693ca3be73d300277e05ca5d0dc5aba027226610",
+    "id": "ccfcec1d-8661-4c31-92ef-758c9fc941a5",
+    "kind": "revision",
+    "parentPlanId": "78285b7f-6c6e-4f33-9c61-340fdcc9651f",
+    "rootPlanId": "78285b7f-6c6e-4f33-9c61-340fdcc9651f",
+    "ruleText": "Viewers can read assets in their own tenant. Editors can also update them. Neither role can access another tenant's assets. Both roles can export assets in their own tenant. Neither role can export another tenant's assets."
+  },
+  "runs": null
 }

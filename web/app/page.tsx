@@ -1,20 +1,20 @@
-import Nav from "@/components/landing/Nav";
-import Footer from "@/components/landing/Footer";
-import LandingMotion from "@/components/landing/LandingMotion";
-import SmoothScroll from "@/components/landing/SmoothScroll";
-import HeroSection from "@/components/landing/sections/HeroSection";
-import PipelineMarquee from "@/components/landing/sections/PipelineMarquee";
-import ProblemSection from "@/components/landing/sections/ProblemSection";
-import WorkflowSection from "@/components/landing/sections/WorkflowSection";
-import DemoSection from "@/components/landing/sections/DemoSection";
-import MatrixSection from "@/components/landing/sections/MatrixSection";
-import FeaturesSection from "@/components/landing/sections/FeaturesSection";
-import ArchitectureSection from "@/components/landing/sections/ArchitectureSection";
-import ApiSection from "@/components/landing/sections/ApiSection";
-import VoiceSection from "@/components/landing/sections/VoiceSection";
-import ScopeSection from "@/components/landing/sections/ScopeSection";
-import QuickstartFaqSection from "@/components/landing/sections/QuickstartFaqSection";
-import FinalCtaSection from "@/components/landing/sections/FinalCtaSection";
+import Nav from '@/components/landing/Nav';
+import Footer from '@/components/landing/Footer';
+import LandingMotion from '@/components/landing/LandingMotion';
+import SmoothScroll from '@/components/landing/SmoothScroll';
+import HeroSection from '@/components/landing/sections/HeroSection';
+import PipelineMarquee from '@/components/landing/sections/PipelineMarquee';
+import ProblemSection from '@/components/landing/sections/ProblemSection';
+import WorkflowSection from '@/components/landing/sections/WorkflowSection';
+import DemoSection from '@/components/landing/sections/DemoSection';
+import MatrixSection from '@/components/landing/sections/MatrixSection';
+import FeaturesSection from '@/components/landing/sections/FeaturesSection';
+import ArchitectureSection from '@/components/landing/sections/ArchitectureSection';
+import ApiSection from '@/components/landing/sections/ApiSection';
+import VoiceSection from '@/components/landing/sections/VoiceSection';
+import ScopeSection from '@/components/landing/sections/ScopeSection';
+import QuickstartFaqSection from '@/components/landing/sections/QuickstartFaqSection';
+import FinalCtaSection from '@/components/landing/sections/FinalCtaSection';
 
 const Home = () => (
   <div className="relative overflow-x-clip bg-canvas text-ink">

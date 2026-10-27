@@ -1,6 +1,6 @@
-import { AlertTriangle, Eye } from "lucide-react";
-import type { Concept } from "@/lib/types";
-import PanelHeading from "./PanelHeading";
+import { AlertTriangle, Eye } from 'lucide-react';
+import type { Concept } from '@/lib/types';
+import PanelHeading from './PanelHeading';
 
 // What the generator understood from the rule, and what it could not decide.
 const PlanInsights = ({
@@ -22,9 +22,12 @@ const PlanInsights = ({
             >
               <Eye size={14} className="mt-0.5 shrink-0 text-ink-faint" />
               <div>
-                <span className="text-ink-muted">{c.label}:</span> <span className="text-ink">{c.value}</span>
+                <span className="text-ink-muted">{c.label}:</span>{' '}
+                <span className="text-ink">{c.value}</span>
                 {c.snippet && (
-                  <div className="mt-0.5 font-mono-tnum text-[11px] text-ink-faint">“{c.snippet}”</div>
+                  <div className="mt-0.5 font-mono-tnum text-[11px] text-ink-faint">
+                    “{c.snippet}”
+                  </div>
                 )}
               </div>
             </li>

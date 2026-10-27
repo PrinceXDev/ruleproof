@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import type { RefObject } from "react";
-import { gsap, useGSAP } from "@/lib/gsap";
+import type { RefObject } from 'react';
+import { gsap, useGSAP } from '@/lib/gsap';
 
 type RevealOptions = { y: number; duration: number; stagger: number };
 
@@ -16,12 +16,12 @@ const useStaggerReveal = (
   useGSAP(
     () => {
       const mm = gsap.matchMedia();
-      mm.add("(prefers-reduced-motion: no-preference)", () => {
+      mm.add('(prefers-reduced-motion: no-preference)', () => {
         gsap.from(selector, {
           opacity: 0,
           y,
           duration,
-          ease: "power2.out",
+          ease: 'power2.out',
           stagger,
         });
       });

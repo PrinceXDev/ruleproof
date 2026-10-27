@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
-import { DEMO_EYEBROW } from "@/constants/landing-styles";
+import type { ReactNode } from 'react';
+import { DEMO_EYEBROW } from '@/constants/landing-styles';
 
 const StageHeading = ({ eyebrow, title }: { eyebrow: string; title: ReactNode }) => (
   <>

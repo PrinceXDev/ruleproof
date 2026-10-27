@@ -1,55 +1,57 @@
-import { Ban, CheckCircle2, Clock, DoorOpen, Loader2, XCircle } from "lucide-react";
-import type { Verdict } from "@/lib/types";
-import Badge from "../Badge";
+import { Ban, CheckCircle2, Clock, DoorOpen, Loader2, XCircle } from 'lucide-react';
+import type { Verdict } from '@/lib/types';
+import Badge from '../Badge';
 
-export type RowState = "queued" | "running" | Verdict | "cancelled";
+export type RowState = 'queued' | 'running' | Verdict | 'cancelled';
 
 export const CheckBadge = ({ state }: { state: RowState }) => {
   switch (state) {
-    case "queued":
+    case 'queued':
       return (
         <Badge tone="neutral">
           <Clock size={11} /> Queued
         </Badge>
       );
-    case "running":
+    case 'running':
       return (
         <Badge tone="neutral">
           <Loader2 size={11} className="animate-spin" /> Running
         </Badge>
       );
-    case "pass":
+    case 'pass':
       return (
         <Badge tone="pass">
           <CheckCircle2 size={11} /> Passed
         </Badge>
       );
-    case "fail":
+    case 'fail':
       return (
         <Badge tone="fail">
           <XCircle size={11} /> Failed
         </Badge>
       );
-    case "error":
+    case 'error':
       return (
         <Badge tone="attn">
           <Ban size={11} /> Error
         </Badge>
       );
-    case "cancelled":
+    case 'cancelled':
       return <Badge tone="neutral">Cancelled</Badge>;
+    default:
+      return <Badge tone="attn">Unknown</Badge>;
   }
 };
 
 // A bypass attempt holds on any refusal and leaks on any 2xx.
 export const VariantBadge = ({ verdict }: { verdict: Verdict }) => {
-  if (verdict === "pass")
+  if (verdict === 'pass')
     return (
       <Badge tone="pass">
         <CheckCircle2 size={11} /> Held
       </Badge>
     );
-  if (verdict === "fail")
+  if (verdict === 'fail')
     return (
       <Badge tone="fail">
         <DoorOpen size={11} /> Leaked

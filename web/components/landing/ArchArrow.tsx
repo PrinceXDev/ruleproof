@@ -1,4 +1,4 @@
-import { ArrowRight } from "lucide-react";
+import { ArrowRight } from 'lucide-react';
 
 const ArchArrow = () => (
   <div aria-hidden className="flex items-center justify-center text-brand/60">

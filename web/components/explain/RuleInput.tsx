@@ -1,14 +1,16 @@
-"use client";
+'use client';
 
-import type { ReactNode } from "react";
-import { Loader2, Mic, Sparkles } from "lucide-react";
-import { buttonVariants } from "../ui/button";
+import type { ReactNode } from 'react';
+import { Loader2, Mic, Sparkles } from 'lucide-react';
+import { buttonVariants } from '../ui/button';
 
-const wordCount = (t: string) => t.trim() ? t.trim().split(/\s+/).length : 0;
+const wordCount = (t: string) => (t.trim() ? t.trim().split(/\s+/).length : 0);
 const sentenceCount = (t: string) => t.split(/[.!?]+/).filter((s) => s.trim()).length;
 
 const Kbd = ({ children }: { children: ReactNode }) => (
-  <kbd className="rounded border border-border bg-panel-elevated px-1.5 py-0.5 font-mono">{children}</kbd>
+  <kbd className="rounded border border-border bg-panel-elevated px-1.5 py-0.5 font-mono">
+    {children}
+  </kbd>
 );
 
 const RuleInput = ({
@@ -38,7 +40,7 @@ const RuleInput = ({
       value={text}
       onChange={(e) => onTextChange(e.target.value)}
       onKeyDown={(e) => {
-        if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && text.trim() && !loading) onGenerate();
+        if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && text.trim() && !loading) onGenerate();
       }}
       placeholder="e.g. Editors can update assets in their own tenant, but viewers cannot..."
       rows={5}
@@ -57,10 +59,18 @@ const RuleInput = ({
         type="button"
         onClick={onGenerate}
         disabled={loading || !text.trim()}
-        className={buttonVariants({ size: "sm" })}
+        className={buttonVariants({ size: 'sm' })}
       >
         {loading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-        {loading ? "Generating…" : hasPlan ? "Update checks" : "Generate checks"}
+        {(() => {
+          if (loading) {
+            return 'Generating…';
+          }
+          if (hasPlan) {
+            return 'Update checks';
+          }
+          return 'Generate checks';
+        })()}
       </button>
     </div>
   </div>

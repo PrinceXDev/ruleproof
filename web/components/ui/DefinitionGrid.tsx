@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ReactNode } from 'react';
 
 // Two-column key/value list in small monospace, as used for request and timing details.
 const DefinitionGrid = ({ rows }: { rows: [string, ReactNode][] }) => (

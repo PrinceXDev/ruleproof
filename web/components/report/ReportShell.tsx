@@ -1,6 +1,6 @@
-import type { ReactNode } from "react";
-import Link from "next/link";
-import Logo from "../landing/Logo";
+import type { ReactNode } from 'react';
+import Link from 'next/link';
+import Logo from '../landing/Logo';
 
 const ReportShell = ({ children }: { children: ReactNode }) => (
   <div className="min-h-dvh bg-canvas text-ink">

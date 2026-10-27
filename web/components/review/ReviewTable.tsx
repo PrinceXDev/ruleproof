@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import type { PlanCase } from "@/lib/types";
-import { caseTitle } from "@/lib/caseText";
-import { SCOPE_LABEL } from "@/constants/labels";
-import EditSelect from "./EditSelect";
-import PolicyBadge from "./PolicyBadge";
-import ReviewRow from "./ReviewRow";
+import { useState } from 'react';
+import type { PlanCase } from '@/lib/types';
+import { caseTitle } from '@/lib/caseText';
+import { SCOPE_LABEL } from '@/constants/labels';
+import EditSelect from './EditSelect';
+import PolicyBadge from './PolicyBadge';
+import ReviewRow from './ReviewRow';
 
 // Table on desktop, stacked cards on mobile; both edit the same expectations.
 const ReviewTable = ({
@@ -29,7 +29,9 @@ const ReviewTable = ({
             <th className="px-4 py-2.5 font-medium">Action</th>
             <th className="px-4 py-2.5 font-medium">Scope</th>
             <th className="px-4 py-2.5 font-medium">Expected</th>
-            <th className="w-10 px-4 py-2.5" />
+            <th className="w-10 px-4 py-2.5">
+              <span className="sr-only">Actions</span>
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -48,11 +50,7 @@ const ReviewTable = ({
 
       <ul className="divide-y divide-border md:hidden">
         {cases.map((c) => (
-          <li
-            key={c.id}
-            data-review-row
-            className="space-y-2 bg-panel px-4 py-3 text-sm"
-          >
+          <li key={c.id} data-review-row className="space-y-2 bg-panel px-4 py-3 text-sm">
             <div className="flex items-center justify-between">
               <span className="font-medium text-ink">{caseTitle(c)}</span>
               <PolicyBadge label={c.expectedLabel} />

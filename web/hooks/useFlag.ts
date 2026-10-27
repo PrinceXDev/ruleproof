@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { useState } from "react";
+import { useState } from 'react';
 
 // A value that resets itself after `ms`, for "Copied" / "Exported" button feedback.
 export const useFlag = <T>(ms = 2000) => {

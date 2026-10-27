@@ -39,6 +39,9 @@ func main() {
 	}
 
 	srv := api.New(db, fixtures)
+	if err := srv.ConfigureWorkbench(os.Getenv("RULEPROOF_WORKBENCH_CONFIG")); err != nil {
+		log.Fatalf("configure workbench: %v", err)
+	}
 	if origin := os.Getenv("RULEPROOF_ALLOWED_ORIGIN"); origin != "" {
 		srv.AllowedOrigin = origin
 	}
@@ -79,7 +82,7 @@ func main() {
 		Handler:           mux,
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
-		WriteTimeout:      15 * time.Second,
+		WriteTimeout:      70 * time.Second,
 		IdleTimeout:       60 * time.Second,
 	}
 	log.Fatal(httpServer.ListenAndServe())

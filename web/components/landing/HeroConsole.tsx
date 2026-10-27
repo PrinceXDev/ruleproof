@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { useRef } from "react";
-import { Braces, Check, X } from "lucide-react";
-import { gsap, useGSAP } from "@/lib/gsap";
-import { cn } from "@/lib/cn";
-import { HERO_CELLS, SAMPLE_CONCEPTS, SAMPLE_RULE } from "@/constants/landing-demo";
+import { useRef } from 'react';
+import { Braces, Check, X } from 'lucide-react';
+import { gsap, useGSAP } from '@/lib/gsap';
+import { cn } from '@/lib/cn';
+import { HERO_CELLS, SAMPLE_CONCEPTS, SAMPLE_RULE } from '@/constants/landing-demo';
 
 const HeroConsole = () => {
   const ref = useRef<HTMLDivElement>(null);
@@ -12,24 +12,24 @@ const HeroConsole = () => {
   useGSAP(
     () => {
       const mm = gsap.matchMedia();
-      mm.add("(prefers-reduced-motion: no-preference)", () => {
+      mm.add('(prefers-reduced-motion: no-preference)', () => {
         const tl = gsap.timeline({ repeat: -1, repeatDelay: 2.6, delay: 0.6 });
-        tl.from("[data-char]", { opacity: 0, duration: 0.01, stagger: 0.014 })
+        tl.from('[data-char]', { opacity: 0, duration: 0.01, stagger: 0.014 })
           .from(
-            "[data-concept]",
-            { opacity: 0, y: 6, scale: 0.9, duration: 0.3, stagger: 0.06, ease: "back.out(2)" },
-            "-=0.2",
+            '[data-concept]',
+            { opacity: 0, y: 6, scale: 0.9, duration: 0.3, stagger: 0.06, ease: 'back.out(2)' },
+            '-=0.2',
           )
-          .from("[data-cell]", { opacity: 0, y: 8, duration: 0.3, stagger: 0.05 }, "+=0.1")
-          .from("[data-run-bar]", { scaleX: 0, duration: 1.1, ease: "power1.inOut" }, "+=0.15")
+          .from('[data-cell]', { opacity: 0, y: 8, duration: 0.3, stagger: 0.05 }, '+=0.1')
+          .from('[data-run-bar]', { scaleX: 0, duration: 1.1, ease: 'power1.inOut' }, '+=0.15')
           .from(
-            "[data-mark]",
-            { opacity: 0, scale: 0.4, duration: 0.22, stagger: 0.12, ease: "back.out(3)" },
-            "<",
+            '[data-mark]',
+            { opacity: 0, scale: 0.4, duration: 0.22, stagger: 0.12, ease: 'back.out(3)' },
+            '<',
           )
-          .from("[data-fail-glow]", { opacity: 0, duration: 0.3, stagger: 0.1 }, "-=0.2")
-          .from("[data-verdict]", { opacity: 0, y: 12, duration: 0.45, ease: "power3.out" })
-          .to("[data-console-body]", { opacity: 0, duration: 0.4 }, "+=3.4");
+          .from('[data-fail-glow]', { opacity: 0, duration: 0.3, stagger: 0.1 }, '-=0.2')
+          .from('[data-verdict]', { opacity: 0, y: 12, duration: 0.45, ease: 'power3.out' })
+          .to('[data-console-body]', { opacity: 0, duration: 0.4 }, '+=3.4');
       });
       return () => mm.revert();
     },
@@ -68,11 +68,13 @@ const HeroConsole = () => {
             </p>
             <p className="min-h-[3.6em] text-[13px] leading-relaxed text-ink sm:text-sm">
               <span className="text-brand">“</span>
-              {SAMPLE_RULE.split("").map((ch, i) => (
-                <span key={i} data-char>
-                  {ch}
-                </span>
-              ))}
+              {Array.from(SAMPLE_RULE, (ch, offset) => ({ ch, id: `char-${offset}` })).map(
+                ({ ch, id }) => (
+                  <span key={id} data-char>
+                    {ch}
+                  </span>
+                ),
+              )}
               <span className="text-brand">”</span>
             </p>
             <div className="mt-2.5 flex flex-wrap gap-1.5">
@@ -97,11 +99,11 @@ const HeroConsole = () => {
               <div data-run-bar className="absolute inset-0 origin-left bg-brand" />
             </div>
             <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
-              {HERO_CELLS.map((c, i) => {
+              {HERO_CELLS.map((c) => {
                 const fail = c.actual !== c.expected;
                 return (
                   <div
-                    key={i}
+                    key={`${c.role}-${c.action}-${c.scope}`}
                     data-cell
                     className="relative overflow-hidden rounded-lg border border-white/[.07] bg-white/[.025] px-2.5 py-2"
                   >
@@ -120,16 +122,20 @@ const HeroConsole = () => {
                       <span
                         data-mark
                         className={cn(
-                          "grid size-4 shrink-0 place-items-center rounded-full",
-                          fail ? "bg-fail text-[#2a0d0b]" : "bg-pass/90 text-[#0b2a1a]",
+                          'grid size-4 shrink-0 place-items-center rounded-full',
+                          fail ? 'bg-fail text-[#2a0d0b]' : 'bg-pass/90 text-[#0b2a1a]',
                         )}
                       >
-                        {fail ? <X size={10} strokeWidth={3} /> : <Check size={10} strokeWidth={3} />}
+                        {fail ? (
+                          <X size={10} strokeWidth={3} />
+                        ) : (
+                          <Check size={10} strokeWidth={3} />
+                        )}
                       </span>
                     </div>
                     <p className="relative mt-1.5 font-mono-tnum text-[10.5px] text-ink-faint">
-                      {c.expected} →{" "}
-                      <span className={fail ? "text-fail" : "text-ink-muted"}>{c.actual}</span>
+                      {c.expected} →{' '}
+                      <span className={fail ? 'text-fail' : 'text-ink-muted'}>{c.actual}</span>
                     </p>
                   </div>
                 );
@@ -146,12 +152,13 @@ const HeroConsole = () => {
                 <X size={15} strokeWidth={2.5} /> Cross-tenant read allowed
               </p>
               <p className="font-mono-tnum text-[11px] text-ink-muted">
-                <span className="text-pass">6 passed</span> · <span className="text-fail">2 failed</span>
+                <span className="text-pass">6 passed</span> ·{' '}
+                <span className="text-fail">2 failed</span>
               </p>
             </div>
             <p className="mt-2 rounded-md bg-black/30 px-2.5 py-1.5 font-mono text-[11px] text-ink-muted">
-              GET /assets/b1 <span className="text-ink-faint">as</span> viewer@A →{" "}
-              <span className="text-fail">200</span>{" "}
+              GET /assets/b1 <span className="text-ink-faint">as</span> viewer@A →{' '}
+              <span className="text-fail">200</span>{' '}
               <span className="text-ink-faint">{'{"asset":"b1","tenant":"B"}'}</span>
             </p>
           </section>

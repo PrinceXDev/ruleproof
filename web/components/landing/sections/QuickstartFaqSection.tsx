@@ -1,9 +1,9 @@
-import type { ReactNode } from "react";
-import { cn } from "@/lib/cn";
-import Faq from "@/components/landing/Faq";
-import Kicker from "@/components/landing/Kicker";
-import Quickstart from "@/components/landing/Quickstart";
-import { LANDING_BAND, LANDING_WRAP } from "@/constants/landing-styles";
+import type { ReactNode } from 'react';
+import { cn } from '@/lib/cn';
+import Faq from '@/components/landing/Faq';
+import Kicker from '@/components/landing/Kicker';
+import Quickstart from '@/components/landing/Quickstart';
+import { LANDING_BAND, LANDING_WRAP } from '@/constants/landing-styles';
 
 const Column = ({
   id,
@@ -25,7 +25,7 @@ const Column = ({
 
 const QuickstartFaqSection = () => (
   <section className={LANDING_BAND}>
-    <div className={cn(LANDING_WRAP, "grid gap-16 lg:grid-cols-2")}>
+    <div className={cn(LANDING_WRAP, 'grid gap-16 lg:grid-cols-2')}>
       <Column id="start" kicker="Quickstart" title="Running in a minute.">
         <Quickstart />
       </Column>

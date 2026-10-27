@@ -1,8 +1,8 @@
-import clsx from "clsx";
-import { ChevronRight, Loader2, Menu } from "lucide-react";
-import type { Fixture } from "@/lib/types";
-import { FIXTURES, FIXTURE_LABEL } from "@/constants/fixtures";
-import Stepper from "./Stepper";
+import clsx from 'clsx';
+import { ChevronRight, Loader2, Menu } from 'lucide-react';
+import type { Fixture } from '@/lib/types';
+import { FIXTURES, FIXTURE_LABEL } from '@/constants/fixtures';
+import Stepper from './Stepper';
 
 const TopBar = ({
   revisionLabel,
@@ -19,7 +19,12 @@ const TopBar = ({
   fixture: Fixture;
   onFixtureChange: (f: Fixture) => void;
   fixtureDisabled: boolean;
-  primaryAction: { label: string; onClick: () => void; disabled?: boolean; loading?: boolean } | null;
+  primaryAction: {
+    label: string;
+    onClick: () => void;
+    disabled?: boolean;
+    loading?: boolean;
+  } | null;
   stepperCurrent: 0 | 1 | 2;
   stepperViewing?: 0 | 1 | 2;
   onStepNavigate?: (i: 0 | 1 | 2) => void;
@@ -48,8 +53,8 @@ const TopBar = ({
           role="radiogroup"
           aria-label="Fixture"
           className={clsx(
-            "flex items-center gap-0.5 rounded-md border border-border bg-panel p-0.5",
-            fixtureDisabled && "opacity-50"
+            'flex items-center gap-0.5 rounded-md border border-border bg-panel p-0.5',
+            fixtureDisabled && 'opacity-50',
           )}
         >
           {FIXTURES.map((f) => (
@@ -61,9 +66,9 @@ const TopBar = ({
               disabled={fixtureDisabled}
               onClick={() => onFixtureChange(f)}
               className={clsx(
-                "whitespace-nowrap rounded px-2 py-1 text-xs font-medium capitalize transition-colors sm:px-2.5",
-                fixture === f ? "bg-panel-elevated text-ink" : "text-ink-muted hover:text-ink",
-                !fixtureDisabled && "cursor-pointer"
+                'whitespace-nowrap rounded px-2 py-1 text-xs font-medium capitalize transition-colors sm:px-2.5',
+                fixture === f ? 'bg-panel-elevated text-ink' : 'text-ink-muted hover:text-ink',
+                !fixtureDisabled && 'cursor-pointer',
               )}
             >
               <span className="sm:hidden">{FIXTURE_LABEL[f].short}</span>

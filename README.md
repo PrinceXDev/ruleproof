@@ -49,6 +49,26 @@ Broken access control is the #1 risk in the OWASP Top 10, and it hides in plain 
 
 ## How it works
 
+### Authorization workbench
+
+Open **Studio → Workbench** for configurable identities, OpenAPI import, precise
+endpoint coverage, response and state assertions, ordered scenarios, independent
+team review, and redacted execution history. The original guided demo remains
+available under **Checks**.
+
+The workbench includes a dedicated CI command with OpenAPI drift gating and JUnit
+reports. See the [workbench guide](docs/specs/authorization-workbench.md) for the
+feature contract, team/environment configuration, execution limits, and examples.
+
+```sh
+go run ./cmd/ruleproof-suite -bundle approved-suite.json -base-url https://staging.example.com \
+  -credential-env viewer-a=VIEWER_TOKEN -credential-env editor-a=EDITOR_TOKEN \
+  -spec openapi-current.json -junit ruleproof-suite.xml
+```
+
+Existing legacy approvals need review and re-export after upgrading to the full
+case fingerprint. Stored plans and run history are retained.
+
 <div align="center">
 <img src="docs/media/how-it-works.gif" width="900" alt="Studio walkthrough: type the rule, generate checks, approve, run against the seeded defect, inspect evidence, switch to the corrected API" />
 </div>
@@ -486,14 +506,14 @@ curl -X POST localhost:8080/api/plans \
 3. The user reviews, can edit any expected outcome, and approves the exact revision — any later edit invalidates that approval.
 4. The approved plan runs against a chosen fixture; every result links back to its expectation, the raw request, and the captured response.
 
-## Scope and limits
+## Guided demo scope and limits
 
 A passing matrix means **the approved scenarios passed**. It does not prove the whole application is secure.
 
 - Two fixed identities (editor/viewer in tenant A) and two fixed assets (tenant A/B). The vocabulary is intentionally small for this demo, not a general policy language.
 - Execution only targets the three bundled synthetic fixtures; there is no arbitrary-URL testing.
 - Bypass variants are a fixed, versioned list of common tricks, not a fuzzer. Holding against them is evidence, not a guarantee.
-- No authentication or team approvals yet.
+- The guided demo is public and synthetic. Workbench adds configured custom APIs, workspace authentication, and team approvals; see [its contract and limits](docs/specs/authorization-workbench.md).
 - `Access-Control-Allow-Origin` defaults to `*` for local development. Set `RULEPROOF_ALLOWED_ORIGIN` to a specific origin before any real deployment. Request bodies are capped at 1MB and the HTTP server sets read/write/idle timeouts.
 
 ## Contributing
@@ -504,10 +524,10 @@ A passing matrix means **the approved scenarios passed**. It does not prove the 
 
 ```sh
 go vet ./... && go test ./...
-cd web && npx tsc --noEmit && npx eslint . && npm run build
+cd web && npm run format:check && npm run typecheck && npm run lint && npm test && npm run build
 ```
 
-The [PR template](.github/pull_request_template.md) carries the product checklist: approved plans must never change silently, and the server must only ever target the bundled fixtures.
+The [PR template](.github/pull_request_template.md) carries the product checklist: approved plans must never change silently. The guided demo targets bundled fixtures; Workbench can also target operator-configured test APIs.
 
 **Labels.** Every PR and issue gets one `type:` label, one or more `area:` labels for the packages it touches, and a `priority:` when it matters for the deadline.
 

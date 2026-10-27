@@ -1,10 +1,10 @@
-import Link from "next/link";
-import { ArrowRight, ArrowUpRight } from "lucide-react";
-import { cn } from "@/lib/cn";
-import { buttonVariants } from "@/components/ui/button";
-import HeroConsole from "@/components/landing/HeroConsole";
-import { HERO_STATS } from "@/constants/landing";
-import { LANDING_WRAP } from "@/constants/landing-styles";
+import Link from 'next/link';
+import { ArrowRight, ArrowUpRight } from 'lucide-react';
+import { cn } from '@/lib/cn';
+import { buttonVariants } from '@/components/ui/button';
+import HeroConsole from '@/components/landing/HeroConsole';
+import { HERO_STATS } from '@/constants/landing';
+import { LANDING_WRAP } from '@/constants/landing-styles';
 
 const HeroSection = () => (
   <section className="relative isolate pt-28 sm:pt-36">
@@ -16,7 +16,12 @@ const HeroSection = () => (
       aria-hidden
       className="absolute left-1/2 top-[-280px] -z-10 h-[620px] w-[1100px] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(213,248,121,.14),transparent)]"
     />
-    <div className={cn(LANDING_WRAP, "grid items-center gap-14 pb-20 lg:grid-cols-[1.05fr_1fr] lg:gap-12 lg:pb-28")}>
+    <div
+      className={cn(
+        LANDING_WRAP,
+        'grid items-center gap-14 pb-20 lg:grid-cols-[1.05fr_1fr] lg:gap-12 lg:pb-28',
+      )}
+    >
       <div>
         <a
           href="#problem"
@@ -31,26 +36,32 @@ const HeroSection = () => (
           data-hero-title
           className="mt-7 text-balance text-[44px] font-semibold leading-[0.98] tracking-[-0.045em] sm:text-7xl lg:text-[84px]"
         >
-          Your UI says no. Does your{" "}
+          Your UI says no. Does your{' '}
           <span className="text-brand underline decoration-brand/30 decoration-[6px] underline-offset-[10px]">
             API?
           </span>
         </h1>
         <p data-hero className="mt-7 max-w-xl text-pretty text-lg leading-relaxed text-ink-muted">
-          RuleProof turns a plain-language access rule into a reviewable,
-          approved test plan — then fires real HTTP requests and shows you,
-          with evidence, exactly where the API breaks the rule.
+          RuleProof turns a plain-language access rule into a reviewable, approved test plan — then
+          fires real HTTP requests and shows you, with evidence, exactly where the API breaks the
+          rule.
         </p>
         <div data-hero className="mt-9 flex flex-wrap items-center gap-3">
-          <Link href="/studio/" className={buttonVariants({ size: "lg" })}>
+          <Link href="/studio/" className={buttonVariants({ size: 'lg' })}>
             Open the Evidence Studio
-            <ArrowUpRight size={18} className="transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5" />
+            <ArrowUpRight
+              size={18}
+              className="transition-transform group-hover/btn:-translate-y-0.5 group-hover/btn:translate-x-0.5"
+            />
           </Link>
-          <a href="#demo" className={buttonVariants({ variant: "secondary", size: "lg" })}>
+          <a href="#demo" className={buttonVariants({ variant: 'secondary', size: 'lg' })}>
             Try the 60-second demo
           </a>
         </div>
-        <dl data-hero className="mt-12 grid max-w-lg grid-cols-3 gap-6 border-t border-white/[.07] pt-6">
+        <dl
+          data-hero
+          className="mt-12 grid max-w-lg grid-cols-3 gap-6 border-t border-white/[.07] pt-6"
+        >
           {HERO_STATS.map(([v, l]) => (
             <div key={l}>
               <dt className="sr-only">{l}</dt>

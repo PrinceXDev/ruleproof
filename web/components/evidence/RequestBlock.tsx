@@ -1,4 +1,4 @@
-import type { CheckResult, PlanCase } from "@/lib/types";
+import type { CheckResult, PlanCase } from '@/lib/types';
 
 // Credentials are never captured, so the Authorization header is always shown redacted.
 const RequestBlock = ({

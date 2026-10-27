@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ReactNode } from 'react';
 
 // Folds away the bypass attempts that were refused.
 const HeldAttempts = ({ count, children }: { count: number; children: ReactNode }) => {

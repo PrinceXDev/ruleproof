@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
-import { cn } from "@/lib/cn";
+import type { ReactNode } from 'react';
+import { cn } from '@/lib/cn';
 
 // Uppercase h2 for the Explain side panels, optionally led by an icon.
 const PanelHeading = ({
@@ -13,8 +13,8 @@ const PanelHeading = ({
 }) => (
   <h2
     className={cn(
-      "text-xs font-medium uppercase tracking-wider",
-      Boolean(icon) && "flex items-center gap-1.5",
+      'text-xs font-medium uppercase tracking-wider',
+      Boolean(icon) && 'flex items-center gap-1.5',
       className,
     )}
   >

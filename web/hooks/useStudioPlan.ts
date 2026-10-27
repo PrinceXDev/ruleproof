@@ -1,15 +1,15 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { api } from "@/lib/api";
-import { downloadJson } from "@/lib/download";
-import { errorMessage } from "@/lib/errorMessage";
-import type { Run } from "@/lib/types";
-import type { Section } from "@/constants/navigation";
-import { SAMPLE_RULE } from "@/constants/rules";
-import useRuleFlip from "./useRuleFlip";
-import type { PlanHistory } from "./usePlanHistory";
-import type { StudioRuns } from "./useStudioRuns";
+import { useState } from 'react';
+import { api } from '@/lib/api';
+import { downloadJson } from '@/lib/download';
+import { errorMessage } from '@/lib/errorMessage';
+import type { Run } from '@/lib/types';
+import type { Section } from '@/constants/navigation';
+import { SAMPLE_RULE } from '@/constants/rules';
+import useRuleFlip from './useRuleFlip';
+import type { PlanHistory } from './usePlanHistory';
+import type { StudioRuns } from './useStudioRuns';
 
 // Rule text, plan lifecycle (generate → edit → approve) and which step is shown.
 const useStudioPlan = ({
@@ -31,7 +31,15 @@ const useStudioPlan = ({
   const [viewOverride, setViewOverride] = useState<0 | 1 | 2 | null>(null);
   const captureFlip = useRuleFlip(plan?.id);
 
-  const derivedStage: 0 | 1 | 2 = !plan ? 0 : !plan.approved ? 1 : 2;
+  const derivedStage: 0 | 1 | 2 = (() => {
+    if (!plan) {
+      return 0;
+    }
+    if (!plan.approved) {
+      return 1;
+    }
+    return 2;
+  })();
   const stage = viewOverride ?? derivedStage;
 
   const handleGenerate = async () => {
@@ -39,9 +47,7 @@ const useStudioPlan = ({
     setGenerating(true);
     captureFlip();
     try {
-      const p = plan
-        ? await api.revisePlan(plan.id, text)
-        : await api.createPlan(text);
+      const p = plan ? await api.revisePlan(plan.id, text) : await api.createPlan(text);
       setPlan(p);
       runs.resetRuns();
       setViewOverride(null);
@@ -69,7 +75,7 @@ const useStudioPlan = ({
     setText(next);
     setViewOverride(0);
     requestAnimationFrame(() => {
-      const input = document.getElementById("rule-input") as HTMLTextAreaElement | null;
+      const input = document.getElementById('rule-input') as HTMLTextAreaElement | null;
       input?.focus();
       input?.setSelectionRange(next.length, next.length);
     });
@@ -97,11 +103,7 @@ const useStudioPlan = ({
     setApproving(true);
     try {
       let p = plan;
-      if (
-        p.assumptions &&
-        p.assumptions.length > 0 &&
-        !p.assumptionsAcknowledged
-      ) {
+      if (p.assumptions && p.assumptions.length > 0 && !p.assumptionsAcknowledged) {
         p = await api.acknowledge(p.id);
       }
       p = await api.approve(p.id);
@@ -130,7 +132,7 @@ const useStudioPlan = ({
         setPlan(targetPlan);
       }
       runs.showRun(historicalRun);
-      setSection("checks");
+      setSection('checks');
       setViewOverride(2);
     } catch (e) {
       setErrorMsg(errorMessage(e));

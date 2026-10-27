@@ -1,17 +1,17 @@
-import type { ReactNode } from "react";
-import { SECTION_TITLE } from "@/constants/landing-styles";
-import Kicker from "./Kicker";
+import type { ReactNode } from 'react';
+import { SECTION_TITLE } from '@/constants/landing-styles';
+import Kicker from './Kicker';
 
 // Kicker + heading + lead paragraph for the two-column sections.
 const ColumnIntro = ({
   kicker,
   title,
-  bodyWidth = "max-w-lg",
+  bodyWidth = 'max-w-lg',
   children,
 }: {
   kicker: string;
   title: string;
-  bodyWidth?: "max-w-lg" | "max-w-md";
+  bodyWidth?: 'max-w-lg' | 'max-w-md';
   children: ReactNode;
 }) => (
   <>

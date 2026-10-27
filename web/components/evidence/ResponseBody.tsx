@@ -1,4 +1,4 @@
-import JsonView from "../JsonView";
+import JsonView from '../JsonView';
 
 const ResponseBody = ({ body }: { body?: string }) =>
   body ? (

@@ -6,27 +6,31 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 )
 
 // maxEvidenceBodyBytes bounds how much of a response body is kept as
-// evidence. The fixture API only ever returns small synthetic JSON, so this
-// is generous headroom, not a real truncation limit in practice.
+// evidence after redaction. Assertions evaluate the larger bounded response.
 const maxEvidenceBodyBytes = 4096
 
 // Case is a reviewed expectation, not a policy inferred by the runner.
 type Case struct {
-	ID     string `json:"id"`
-	Rule   string `json:"rule"`
-	Actor  string `json:"actor"`
-	Method string `json:"method,omitempty"`
-	Path   string `json:"path"`
-	Token  string `json:"-"`
-	Want   int    `json:"expected_status"`
+	ID               string   `json:"id"`
+	Rule             string   `json:"rule"`
+	Actor            string   `json:"actor"`
+	Method           string   `json:"method,omitempty"`
+	Path             string   `json:"path"`
+	Token            string   `json:"-"`
+	RedactionSecrets []string `json:"-"`
+	Want             int      `json:"expected_status"`
 	// Headers are extra request headers a bypass attempt sends. They are
 	// never credentials, so they are kept as evidence.
-	Headers map[string]string `json:"headers,omitempty"`
-	Variant *Variant          `json:"variant,omitempty"`
+	Headers     map[string]string `json:"headers,omitempty"`
+	Variant     *Variant          `json:"variant,omitempty"`
+	RequestBody string            `json:"requestBody,omitempty"`
+	Assertions  []Assertion       `json:"assertions,omitempty"`
+	State       *StateCheck       `json:"state,omitempty"`
 }
 
 // Variant marks a case as a bypass attempt derived from an approved deny case.
@@ -44,10 +48,11 @@ type Result struct {
 	Verdict    string `json:"verdict"`
 	Detail     string `json:"detail"`
 	DurationMS int64  `json:"duration_ms"`
-	// Body is the raw response body, kept only because the fixture API
-	// returns nothing but small synthetic asset data — never credentials.
-	// A real integration target would redact this before it reaches here.
-	Body string `json:"body,omitempty"`
+	// Body is a bounded, redacted preview, never the unfiltered response.
+	Body       string            `json:"body,omitempty"`
+	Truncated  bool              `json:"truncated,omitempty"`
+	Redacted   bool              `json:"redacted,omitempty"`
+	Assertions []AssertionResult `json:"assertionResults,omitempty"`
 }
 
 // Held reports whether status is a refusal a denied request may legitimately
@@ -67,23 +72,41 @@ func Held(status int) bool {
 // credential involved) is never captured into the result.
 func Run(ctx context.Context, base string, cases []Case) []Result {
 	client := &http.Client{Timeout: 2 * time.Second, CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }}
+	return RunWithClient(ctx, client, base, cases)
+}
+
+// RunWithClient permits callers to supply a target-restricted transport.
+func RunWithClient(ctx context.Context, client *http.Client, base string, cases []Case) []Result {
 	results := make([]Result, 0, len(cases))
 	for _, c := range cases {
 		started := time.Now()
-		r := Result{Case: c, Verdict: "error"}
-		if c.Want != 200 && c.Want != 401 && c.Want != 403 && c.Want != 404 {
-			r.Detail = "unsupported expected status"
+		r := Result{Case: safeCase(c), Verdict: "error"}
+		if err := Validate(c); err != nil {
+			r.Detail = err.Error()
 			results = append(results, r)
 			continue
+		}
+		var before []byte
+		if c.State != nil {
+			var err error
+			before, err = observe(ctx, client, base, c.State)
+			if err != nil {
+				r.Detail = "state baseline unavailable; mutation was not sent"
+				results = append(results, r)
+				continue
+			}
 		}
 		method := c.Method
 		if method == "" {
 			method = http.MethodGet
 		}
-		req, err := http.NewRequestWithContext(ctx, method, base+c.Path, nil)
+		req, err := http.NewRequestWithContext(ctx, method, base+c.Path, strings.NewReader(c.RequestBody))
 		if err != nil {
 			r.Detail = "invalid request"
 		} else {
+			if c.RequestBody != "" {
+				req.Header.Set("Content-Type", "application/json")
+			}
 			for k, v := range c.Headers {
 				req.Header.Set(k, v)
 			}
@@ -95,10 +118,34 @@ func Run(ctx context.Context, base string, cases []Case) []Result {
 				r.Detail = "request failed or timed out; no authorization conclusion"
 			} else {
 				r.Actual = resp.StatusCode
-				body, _ := io.ReadAll(io.LimitReader(resp.Body, maxEvidenceBodyBytes))
+				body, readErr := io.ReadAll(io.LimitReader(resp.Body, maxResponseBytes+1))
 				_ = resp.Body.Close()
-				r.Body = string(body)
+				r.Truncated = len(body) > maxEvidenceBodyBytes
+				secrets := append([]string{c.Token, stateToken(c)}, c.RedactionSecrets...)
+				r.Body, r.Redacted = evidence(body, secrets...)
 				r.Verdict, r.Detail = judge(c, r.Actual)
+				if readErr != nil || len(body) > maxResponseBytes {
+					r.Verdict, r.Detail = "error", "response incomplete or exceeds 1 MiB; no assertion conclusion"
+				} else {
+					for _, a := range c.Assertions {
+						ar := evaluate(body, a)
+						r.Assertions = append(r.Assertions, ar)
+						if !ar.Passed {
+							r.Verdict = "fail"
+							r.Detail = "response assertion failed"
+						}
+					}
+				}
+			}
+		}
+		if c.State != nil && before != nil {
+			after, err := observe(ctx, client, base, c.State)
+			ar := AssertionResult{Operator: "unchanged", Path: c.State.Pointer, Passed: err == nil && sameState(before, after, c.State.Pointer)}
+			r.Assertions = append(r.Assertions, ar)
+			if err != nil {
+				r.Verdict, r.Detail = "error", "state verification unavailable"
+			} else if !ar.Passed {
+				r.Verdict, r.Detail = "fail", "request changed protected state"
 			}
 		}
 		r.DurationMS = time.Since(started).Milliseconds()

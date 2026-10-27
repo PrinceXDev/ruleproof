@@ -1,7 +1,7 @@
-import type { ReactNode } from "react";
-import type { LucideIcon } from "lucide-react";
-import { cn } from "@/lib/cn";
-import { LANDING_CARD } from "@/constants/landing-styles";
+import type { ReactNode } from 'react';
+import type { LucideIcon } from 'lucide-react';
+import { cn } from '@/lib/cn';
+import { LANDING_CARD } from '@/constants/landing-styles';
 
 const Feature = ({
   icon: Icon,
@@ -19,7 +19,7 @@ const Feature = ({
   <article
     className={cn(
       LANDING_CARD,
-      "group relative overflow-hidden p-6 transition-colors duration-300 hover:border-white/15 sm:p-7",
+      'group relative overflow-hidden p-6 transition-colors duration-300 hover:border-white/15 sm:p-7',
       className,
     )}
   >

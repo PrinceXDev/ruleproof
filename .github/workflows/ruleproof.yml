@@ -7,6 +7,19 @@ on:
 jobs:
   enforce-access-rules:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: ruleproof-test
+          POSTGRES_DB: ruleproof_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
 
@@ -15,7 +28,12 @@ jobs:
           go-version-file: go.mod
 
       - name: Go tests
-        run: go test ./...
+        env:
+          RULEPROOF_TEST_POSTGRES: postgres://postgres:ruleproof-test@localhost:5432/ruleproof_test?sslmode=disable
+        run: go test -race ./internal/... ./cmd/...
+
+      - name: Go static analysis
+        run: go vet ./internal/... ./cmd/...
 
       # The approved plan must hold against the corrected API, including every
       # bypass variant. Any mismatch fails this step and shows up as
@@ -57,3 +75,23 @@ jobs:
         with:
           name: ruleproof-junit
           path: ruleproof-*junit.xml
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm test
+      - name: Generate Next.js types and check TypeScript
+        run: npm run typecheck
+      - run: npm run lint
+      - run: npm run build

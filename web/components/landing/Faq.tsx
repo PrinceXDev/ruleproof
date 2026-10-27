@@ -1,11 +1,15 @@
-"use client";
+'use client';
 
-import * as Accordion from "@radix-ui/react-accordion";
-import { Plus } from "lucide-react";
-import { FAQS } from "@/constants/landing-faq";
+import * as Accordion from '@radix-ui/react-accordion';
+import { Plus } from 'lucide-react';
+import { FAQS } from '@/constants/landing-faq';
 
 const Faq = () => (
-  <Accordion.Root type="single" collapsible className="divide-y divide-white/[.07] border-y border-white/[.07]">
+  <Accordion.Root
+    type="single"
+    collapsible
+    className="divide-y divide-white/[.07] border-y border-white/[.07]"
+  >
     {FAQS.map(([q, a]) => (
       <Accordion.Item key={q} value={q}>
         <Accordion.Header>

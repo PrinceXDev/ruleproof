@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
-import clsx from "clsx";
-import { Check } from "lucide-react";
-import { useRef } from "react";
-import { gsap, useGSAP } from "@/lib/gsap";
-import { STUDIO_STEPS } from "@/constants/navigation";
+import clsx from 'clsx';
+import { Check } from 'lucide-react';
+import { useRef } from 'react';
+import { gsap, useGSAP } from '@/lib/gsap';
+import { STUDIO_STEPS } from '@/constants/navigation';
 
-export type StepStatus = "done" | "active" | "pending";
+export type StepStatus = 'done' | 'active' | 'pending';
 
 const Stepper = ({
   current,
@@ -27,15 +27,15 @@ const Stepper = ({
   useGSAP(() => {
     if (current <= prevCurrent.current) {
       prevCurrent.current = current;
-      return;
+      return undefined;
     }
     const completedIndex = prevCurrent.current;
     prevCurrent.current = current;
     const el = badgeRefs.current[completedIndex];
-    if (!el) return;
+    if (!el) return undefined;
     const mm = gsap.matchMedia();
-    mm.add("(prefers-reduced-motion: no-preference)", () => {
-      gsap.fromTo(el, { scale: 0.88 }, { scale: 1, duration: 0.35, ease: "back.out(2.5)" });
+    mm.add('(prefers-reduced-motion: no-preference)', () => {
+      gsap.fromTo(el, { scale: 0.88 }, { scale: 1, duration: 0.35, ease: 'back.out(2.5)' });
     });
     return () => mm.revert();
   }, [current]);
@@ -43,7 +43,15 @@ const Stepper = ({
   return (
     <ol className="flex items-center gap-2" aria-label="Workflow progress">
       {STUDIO_STEPS.map((step, i) => {
-        const status: StepStatus = i < current ? "done" : i === current ? "active" : "pending";
+        const status: StepStatus = (() => {
+          if (i < current) {
+            return 'done';
+          }
+          if (i === current) {
+            return 'active';
+          }
+          return 'pending';
+        })();
         const clickable = Boolean(onNavigate) && i <= current && i !== active;
         return (
           <li key={step.n} className="flex items-center gap-2">
@@ -55,16 +63,16 @@ const Stepper = ({
               disabled={!clickable}
               onClick={clickable ? () => onNavigate?.(i as 0 | 1 | 2) : undefined}
               className={clsx(
-                "flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors",
-                i === active && status === "active" && "border-brand/40 bg-brand/10 text-ink",
-                i === active && status === "done" && "border-pass/40 bg-pass/10 text-pass",
-                i !== active && status === "done" && "border-pass/30 bg-pass/5 text-pass/80",
-                status === "pending" && "border-border bg-transparent text-ink-faint",
-                clickable ? "cursor-pointer hover:opacity-80" : "cursor-default"
+                'flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors',
+                i === active && status === 'active' && 'border-brand/40 bg-brand/10 text-ink',
+                i === active && status === 'done' && 'border-pass/40 bg-pass/10 text-pass',
+                i !== active && status === 'done' && 'border-pass/30 bg-pass/5 text-pass/80',
+                status === 'pending' && 'border-border bg-transparent text-ink-faint',
+                clickable ? 'cursor-pointer hover:opacity-80' : 'cursor-default',
               )}
-              aria-current={i === active ? "step" : undefined}
+              aria-current={i === active ? 'step' : undefined}
             >
-              {status === "done" ? (
+              {status === 'done' ? (
                 <Check size={12} strokeWidth={2.5} />
               ) : (
                 <span className="font-mono-tnum">{step.n}</span>

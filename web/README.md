@@ -1,36 +1,50 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# RuleProof frontend
 
-## Getting Started
+The Next.js application exports static pages served by the Go server. Run `npm ci`,
+then `npm run dev` for development or `npm run build` for production.
+See the root README for server setup and the Workbench configuration.
 
-First, run the development server:
+## Code conventions
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Use arrow functions, including React components and callbacks.
+- Keep each TypeScript source file within 200 lines, including blank lines and comments.
+  Extract components, domain hooks, and pure helpers by responsibility.
+- Put reusable values, labels, limits, and styles in `constants/`.
+- `.editorconfig` defines UTF-8, LF, final newlines and two-space frontend indentation.
+  Prettier controls formatting; use the editor's format-on-save integration.
+- ESLint loads the actual `eslint-config-airbnb` rules through `FlatCompat`, then
+  the Next.js and TypeScript rules. Next supplies the current plugin implementations.
+  TypeScript types and the automatic JSX runtime replace redundant JavaScript checks.
+  Labels may use either `htmlFor` or a nested control; native UI wrappers can forward props.
+  Error and warning diagnostics remain allowed.
+- `.npmrc` enables legacy peer resolution because Airbnb's published configuration
+  declares ESLint 8 peers while this Next.js application uses ESLint 9. The adapted
+  configuration is exercised by lint in CI; do not bypass lint to update dependencies.
+
+## Checks
+
+```sh
+npm run format:check
+npm run typecheck
+npm run lint
+npm test
+npm run build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+CI runs each command. `npm run format` and `npm run lint:fix` apply mechanical fixes.
+`npm run typecheck` generates Next.js route types before running TypeScript, so it
+works on a fresh checkout without a prior dev session or production build. Use this
+command instead of invoking `tsc` directly; generated types remain Git-ignored.
+The Node tests exercise revision transitions and the API request boundary. Backend
+tests cover approvals, workspace isolation, execution, redaction, and persistence.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Workbench structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+`components/workbench/` contains the workspace views and small editors.
+`hooks/workbench/` separates session loading, revision lifecycle, debounced analysis,
+and asynchronous actions. `lib/workbenchState.ts` owns immutable draft transitions;
+`lib/workbench.ts` owns the API types and request boundary. Editing never changes a
+saved revision, and discarded edits reset local editor state as well as the draft.
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The feature contract and operational limits are documented in
+[`docs/specs/authorization-workbench.md`](../docs/specs/authorization-workbench.md).

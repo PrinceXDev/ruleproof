@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @theme {
   /* Evidence Studio palette */
@@ -17,7 +17,7 @@
   --color-attn: #ebc77d;
 
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", monospace;
+  --font-mono: var(--font-geist-mono), ui-monospace, 'SF Mono', monospace;
 
   --radius-sm: 6px;
   --radius-md: 8px;
@@ -36,32 +36,66 @@
   --animate-scan: scan 6s ease-in-out infinite;
 
   @keyframes select-in {
-    from { opacity: 0; transform: translateY(-4px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
   @keyframes select-out {
-    from { opacity: 1; }
-    to { opacity: 0; }
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
   }
   @keyframes accordion-down {
-    from { height: 0; }
-    to { height: var(--radix-accordion-content-height); }
+    from {
+      height: 0;
+    }
+    to {
+      height: var(--radix-accordion-content-height);
+    }
   }
   @keyframes accordion-up {
-    from { height: var(--radix-accordion-content-height); }
-    to { height: 0; }
+    from {
+      height: var(--radix-accordion-content-height);
+    }
+    to {
+      height: 0;
+    }
   }
   @keyframes marquee {
-    to { transform: translateX(-50%); }
+    to {
+      transform: translateX(-50%);
+    }
   }
   @keyframes pulse-ring {
-    0% { box-shadow: 0 0 0 0 rgb(213 248 121 / 0.55); }
-    70%, 100% { box-shadow: 0 0 0 10px rgb(213 248 121 / 0); }
+    0% {
+      box-shadow: 0 0 0 0 rgb(213 248 121 / 0.55);
+    }
+    70%,
+    100% {
+      box-shadow: 0 0 0 10px rgb(213 248 121 / 0);
+    }
   }
   @keyframes scan {
-    0%, 100% { transform: translateY(-10%); opacity: 0; }
-    15%, 85% { opacity: 1; }
-    50% { transform: translateY(1100%); }
+    0%,
+    100% {
+      transform: translateY(-10%);
+      opacity: 0;
+    }
+    15%,
+    85% {
+      opacity: 1;
+    }
+    50% {
+      transform: translateY(1100%);
+    }
   }
 }
 
@@ -89,21 +123,21 @@ body {
    for everything clickable; in the base layer so a cursor-* utility still wins. */
 @layer base {
   button:not(:disabled),
-  [role="button"]:not([aria-disabled="true"]),
-  [role="option"]:not([data-disabled]),
-  [role="tab"],
+  [role='button']:not([aria-disabled='true']),
+  [role='option']:not([data-disabled]),
+  [role='tab'],
   summary,
   select:not(:disabled),
-  input[type="checkbox"]:not(:disabled),
-  input[type="radio"]:not(:disabled),
-  label:has(> input[type="checkbox"]:not(:disabled)),
-  label:has(> input[type="radio"]:not(:disabled)) {
+  input[type='checkbox']:not(:disabled),
+  input[type='radio']:not(:disabled),
+  label:has(> input[type='checkbox']:not(:disabled)),
+  label:has(> input[type='radio']:not(:disabled)) {
     cursor: pointer;
   }
   button:disabled,
   select:disabled,
   input:disabled,
-  [aria-disabled="true"] {
+  [aria-disabled='true'] {
     cursor: not-allowed;
   }
 }

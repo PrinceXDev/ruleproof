@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { Check } from "lucide-react";
-import { cn } from "@/lib/cn";
-import { DEMO_STAGES } from "@/constants/landing-demo";
+import { Check } from 'lucide-react';
+import { cn } from '@/lib/cn';
+import { DEMO_STAGES } from '@/constants/landing-demo';
 
 const DemoStepper = ({
   stage,
@@ -19,23 +19,28 @@ const DemoStepper = ({
       return (
         <li key={name}>
           <button
-            aria-current={stage === i ? "step" : undefined}
+            type="button"
+            aria-current={stage === i ? 'step' : undefined}
             disabled={i === 2 && !approved}
             onClick={() => onSelect(i)}
             className={cn(
-              "relative flex w-full items-center gap-2.5 px-3 py-3.5 text-left text-xs transition-colors sm:px-5 sm:text-[13px]",
-              "disabled:cursor-not-allowed disabled:opacity-40",
-              stage === i ? "bg-white/[.03] text-ink" : "text-ink-muted hover:text-ink",
+              'relative flex w-full items-center gap-2.5 px-3 py-3.5 text-left text-xs transition-colors sm:px-5 sm:text-[13px]',
+              'disabled:cursor-not-allowed disabled:opacity-40',
+              stage === i ? 'bg-white/[.03] text-ink' : 'text-ink-muted hover:text-ink',
             )}
           >
             <span
               className={cn(
-                "grid size-6 shrink-0 place-items-center rounded-full border font-mono text-[10px]",
-                stage === i
-                  ? "border-brand bg-brand text-brand-ink"
-                  : done
-                    ? "border-pass/50 text-pass"
-                    : "border-white/15",
+                'grid size-6 shrink-0 place-items-center rounded-full border font-mono text-[10px]',
+                (() => {
+                  if (stage === i) {
+                    return 'border-brand bg-brand text-brand-ink';
+                  }
+                  if (done) {
+                    return 'border-pass/50 text-pass';
+                  }
+                  return 'border-white/15';
+                })(),
               )}
             >
               {done && stage !== i ? <Check size={12} /> : i + 1}

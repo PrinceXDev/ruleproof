@@ -1,9 +1,12 @@
-import { Pencil } from "lucide-react";
-import { FIXTURE_REFERENCE } from "@/constants/fixtureReference";
-import PanelHeading from "./PanelHeading";
+import { Pencil } from 'lucide-react';
+import { FIXTURE_REFERENCE } from '@/constants/fixtureReference';
+import PanelHeading from './PanelHeading';
 
 const FixtureReference = () => (
-  <aside data-explain-reveal className="h-fit rounded-xl border border-border bg-panel p-5 lg:mt-[104px]">
+  <aside
+    data-explain-reveal
+    className="h-fit rounded-xl border border-border bg-panel p-5 lg:mt-[104px]"
+  >
     <PanelHeading icon={<Pencil size={12} />} className="mb-3 text-ink-faint">
       Fixture reference
     </PanelHeading>

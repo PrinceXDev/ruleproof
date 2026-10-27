@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"time"
 
@@ -27,17 +28,21 @@ const maxRequestBodyBytes = 1 << 20
 // checks against, keyed by fixture name ("broken", "partial", "fixed"). All
 // are synthetic and started locally — never an arbitrary user-supplied target.
 type Server struct {
+	Workbench     *WorkbenchConfig
 	Fixtures      map[string]string
 	Store         *store.Store
 	AllowedOrigin string // CORS origin; "*" is fine for this local demo, tighten before any real deployment
 }
 
 func New(st *store.Store, fixtures map[string]string) *Server {
-	return &Server{Store: st, Fixtures: fixtures, AllowedOrigin: "*"}
+	s := &Server{Store: st, Fixtures: fixtures, AllowedOrigin: "*"}
+	_ = s.ConfigureWorkbench("")
+	return s
 }
 
 func (s *Server) Routes() http.Handler {
 	mux := http.NewServeMux()
+	mux.HandleFunc("/api/workbench/", s.handleWorkbench)
 	mux.HandleFunc("GET /api/health", s.handleHealth)
 	mux.HandleFunc("POST /api/plans", s.handleCreatePlan)
 	mux.HandleFunc("GET /api/plans/{id}", s.handleGetPlan)
@@ -59,7 +64,7 @@ func (s *Server) cors(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", s.AllowedOrigin)
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
 			return
@@ -72,7 +77,15 @@ func (s *Server) cors(next http.Handler) http.Handler {
 // malformed body can't force unbounded reads.
 func decodeJSON(w http.ResponseWriter, r *http.Request, v any) error {
 	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
-	return json.NewDecoder(r.Body).Decode(v)
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(v); err != nil {
+		return err
+	}
+	if err := decoder.Decode(new(any)); err != io.EOF {
+		return errors.New("request must contain exactly one JSON value")
+	}
+	return nil
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
@@ -82,28 +95,30 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 // --- response shapes ---
 
 type planResponse struct {
-	ID                      string          `json:"id"`
-	RootPlanID              string          `json:"rootPlanId"`
-	ParentPlanID            string          `json:"parentPlanId,omitempty"`
-	Kind                    string          `json:"kind"`
-	RuleText                string          `json:"ruleText"`
-	Cases                   []rules.Case    `json:"cases"`
-	Assumptions             []string        `json:"assumptions"`
-	Concepts                []rules.Concept `json:"concepts"`
-	Hash                    string          `json:"hash"`
-	AssumptionsAcknowledged bool            `json:"assumptionsAcknowledged"`
-	Approved                bool            `json:"approved"`
-	ApprovedAt              *time.Time      `json:"approvedAt,omitempty"`
-	CreatedAt               time.Time       `json:"createdAt"`
+	ID                      string           `json:"id"`
+	RootPlanID              string           `json:"rootPlanId"`
+	ParentPlanID            string           `json:"parentPlanId,omitempty"`
+	Kind                    string           `json:"kind"`
+	RuleText                string           `json:"ruleText"`
+	Cases                   []rules.Case     `json:"cases"`
+	Assumptions             []string         `json:"assumptions"`
+	Concepts                []rules.Concept  `json:"concepts"`
+	Conflicts               []rules.Conflict `json:"conflicts"`
+	Hash                    string           `json:"hash"`
+	AssumptionsAcknowledged bool             `json:"assumptionsAcknowledged"`
+	Approved                bool             `json:"approved"`
+	ApprovedAt              *time.Time       `json:"approvedAt,omitempty"`
+	CreatedAt               time.Time        `json:"createdAt"`
 }
 
 func toPlanResponse(p *store.Plan) planResponse {
 	return planResponse{
 		ID: p.ID, RootPlanID: p.RootPlanID, ParentPlanID: p.ParentPlanID, Kind: string(p.Kind),
 		RuleText: p.RuleText, Cases: p.Cases, Assumptions: p.Assumptions,
-		Concepts: rules.Parse(p.RuleText).Concepts,
-		Hash:     p.Hash, AssumptionsAcknowledged: p.AssumptionsAcknowledged,
-		Approved: p.Approved, ApprovedAt: p.ApprovedAt, CreatedAt: p.CreatedAt,
+		Concepts:  rules.Parse(p.RuleText).Concepts,
+		Conflicts: rules.Conflicts(p.RuleText),
+		Hash:      p.Hash, AssumptionsAcknowledged: p.AssumptionsAcknowledged,
+		Approved: p.Approved && p.Hash == rules.Hash(p.Cases), ApprovedAt: p.ApprovedAt, CreatedAt: p.CreatedAt,
 	}
 }
 

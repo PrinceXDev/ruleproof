@@ -1,14 +1,14 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { Check, Copy } from "lucide-react";
+import { useState } from 'react';
+import { Check, Copy } from 'lucide-react';
 
 const CopyButton = ({ text }: { text: string }) => {
   const [copied, setCopied] = useState(false);
   return (
     <button
       type="button"
-      aria-label={copied ? "Copied" : "Copy to clipboard"}
+      aria-label={copied ? 'Copied' : 'Copy to clipboard'}
       onClick={async () => {
         await navigator.clipboard.writeText(text);
         setCopied(true);
