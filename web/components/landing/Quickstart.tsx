@@ -1,12 +1,18 @@
-"use client";
+'use client';
 
-import * as Tabs from "@radix-ui/react-tabs";
-import { QUICKSTART_TABS } from "@/constants/landing-faq";
-import CopyButton from "./CopyButton";
+import * as Tabs from '@radix-ui/react-tabs';
+import { QUICKSTART_TABS } from '@/constants/landing-faq';
+import CopyButton from './CopyButton';
 
 const Quickstart = () => (
-  <Tabs.Root defaultValue="dev" className="overflow-hidden rounded-2xl border border-white/10 bg-[#121513]">
-    <Tabs.List aria-label="Ways to run RuleProof" className="flex overflow-x-auto border-b border-white/[.07] px-2">
+  <Tabs.Root
+    defaultValue="dev"
+    className="overflow-hidden rounded-2xl border border-white/10 bg-[#121513]"
+  >
+    <Tabs.List
+      aria-label="Ways to run RuleProof"
+      className="flex overflow-x-auto border-b border-white/[.07] px-2"
+    >
       {QUICKSTART_TABS.map((t) => (
         <Tabs.Trigger
           key={t.id}
@@ -28,7 +34,7 @@ const Quickstart = () => (
             >
               <span className="select-none text-brand">$</span>
               <code className="flex-1 overflow-x-auto whitespace-nowrap py-2 text-ink">{line}</code>
-              <CopyButton text={line.replace(/\s+#.*$/, "")} />
+              <CopyButton text={line.replace(/\s+#.*$/, '')} />
             </div>
           ))}
         </div>

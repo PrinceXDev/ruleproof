@@ -30,7 +30,8 @@
 - [ ] `cd web && npx eslint .` passes
 - [ ] `cd web && npm run build` succeeds
 - [ ] Approved plans still can't change silently (any edit creates a new revision that needs approval)
-- [ ] Execution still only targets the bundled fixtures from the server
+- [ ] Execution targets only bundled fixtures or operator-configured Workbench environments
+- [ ] Frontend formatting and regression tests pass
 - [ ] No secrets, tokens or real `.env` values in the diff
 - [ ] README / landing page updated if behaviour or API changed
 

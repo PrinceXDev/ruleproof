@@ -1,5 +1,5 @@
 const Logo = ({ className }: { className?: string }) => (
-  <span className={`flex items-center gap-2 ${className ?? ""}`}>
+  <span className={`flex items-center gap-2 ${className ?? ''}`}>
     <svg width="26" height="26" viewBox="0 0 22 22" fill="none" aria-hidden>
       <rect width="22" height="22" rx="6.5" fill="#D5F879" />
       <path

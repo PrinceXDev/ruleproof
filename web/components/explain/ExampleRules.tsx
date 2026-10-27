@@ -1,8 +1,14 @@
-"use client";
+'use client';
 
-import { EXAMPLE_RULES } from "@/constants/rules";
+import { EXAMPLE_RULES } from '@/constants/rules';
 
-const ExampleRules = ({ text, onTextChange }: { text: string; onTextChange: (t: string) => void }) => (
+const ExampleRules = ({
+  text,
+  onTextChange,
+}: {
+  text: string;
+  onTextChange: (t: string) => void;
+}) => (
   <div className="mt-5">
     <p className="mb-2 text-xs text-ink-faint">Try an example</p>
     <div className="flex flex-wrap gap-2">
@@ -20,7 +26,7 @@ const ExampleRules = ({ text, onTextChange }: { text: string; onTextChange: (t: 
       ))}
       <button
         type="button"
-        onClick={() => onTextChange("")}
+        onClick={() => onTextChange('')}
         className="rounded-lg px-3 py-2 text-[13px] text-ink-faint transition-colors hover:text-ink"
       >
         Clear

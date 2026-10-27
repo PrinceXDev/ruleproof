@@ -1,6 +1,6 @@
-import { ShieldOff } from "lucide-react";
-import type { PlanDiff } from "@/lib/types";
-import Chip from "./Chip";
+import { ShieldOff } from 'lucide-react';
+import type { PlanDiff } from '@/lib/types';
+import Chip from './Chip';
 
 // One-glance summary of what changed between the two revisions.
 const SummaryChips = ({ diff, changed }: { diff: PlanDiff; changed: number }) => (
@@ -9,10 +9,12 @@ const SummaryChips = ({ diff, changed }: { diff: PlanDiff; changed: number }) =>
     {diff.textChanged && <Chip tone="brand">Wording changed</Chip>}
     {changed > 0 && (
       <Chip tone="attn">
-        {changed} expectation{changed === 1 ? "" : "s"} changed
+        {changed} expectation{changed === 1 ? '' : 's'} changed
       </Chip>
     )}
-    {diff.cases.length - changed > 0 && <Chip tone="attn">{diff.cases.length - changed} cases added/removed</Chip>}
+    {diff.cases.length - changed > 0 && (
+      <Chip tone="attn">{diff.cases.length - changed} cases added/removed</Chip>
+    )}
     {diff.planChanged && <Chip>{diff.unchangedCases} unchanged</Chip>}
     {diff.approvalReset && (
       <Chip tone="fail">

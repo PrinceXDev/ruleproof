@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
-import SectionLabel from "../ui/SectionLabel";
+import type { ReactNode } from 'react';
+import SectionLabel from '../ui/SectionLabel';
 
 const Block = ({ title, children }: { title: string; children: ReactNode }) => (
   <div>

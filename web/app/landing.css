@@ -492,7 +492,7 @@
   border-radius: 3px;
   color: #a8b2a9;
 }
-.fixture-toggle button[aria-pressed="true"] {
+.fixture-toggle button[aria-pressed='true'] {
   background: #d5f879;
   color: #182014;
 }
@@ -525,7 +525,7 @@
   font-size: 12px;
   min-height: 58px;
 }
-.result-list button[aria-pressed="true"] {
+.result-list button[aria-pressed='true'] {
   background: #26321f;
   border: 1px solid #8baf59;
   border-radius: 5px;

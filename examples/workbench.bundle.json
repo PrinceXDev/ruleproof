@@ -1,0 +1,212 @@
+{
+  "revision": {
+    "id": "synthetic-reviewed-example",
+    "suite": {
+      "name": "Tenant isolation",
+      "ruleText": "Viewers can read assets in their own tenant. Editors can update their own assets. Neither role can access another tenant's assets.",
+      "environment": "fixed",
+      "identities": [
+        {
+          "id": "editor-a",
+          "label": "Editor · tenant A",
+          "role": "editor",
+          "tenant": "A",
+          "credential": "editor-a"
+        },
+        {
+          "id": "viewer-a",
+          "label": "Viewer · tenant A",
+          "role": "viewer",
+          "tenant": "A",
+          "credential": "viewer-a"
+        }
+      ],
+      "cases": [
+        {
+          "id": "editor-a-GET-a1",
+          "identityId": "editor-a",
+          "scope": "own",
+          "method": "GET",
+          "path": "/assets/a1",
+          "expectedStatus": 200,
+          "assertions": [
+            {
+              "path": "/tenant",
+              "operator": "equals",
+              "value": "A"
+            },
+            {
+              "path": "/password",
+              "operator": "absent"
+            }
+          ]
+        },
+        {
+          "id": "editor-a-PUT-a1",
+          "identityId": "editor-a",
+          "scope": "own",
+          "method": "PUT",
+          "path": "/assets/a1",
+          "expectedStatus": 200,
+          "body": "{\"name\":\"Reviewed update\"}",
+          "assertions": [
+            {
+              "path": "/tenant",
+              "operator": "equals",
+              "value": "A"
+            },
+            {
+              "path": "/password",
+              "operator": "absent"
+            }
+          ]
+        },
+        {
+          "id": "editor-a-GET-b1",
+          "identityId": "editor-a",
+          "scope": "other",
+          "method": "GET",
+          "path": "/assets/b1",
+          "expectedStatus": 403
+        },
+        {
+          "id": "editor-a-PUT-b1",
+          "identityId": "editor-a",
+          "scope": "other",
+          "method": "PUT",
+          "path": "/assets/b1",
+          "expectedStatus": 403,
+          "body": "{\"name\":\"Reviewed update\"}"
+        },
+        {
+          "id": "viewer-a-GET-a1",
+          "identityId": "viewer-a",
+          "scope": "own",
+          "method": "GET",
+          "path": "/assets/a1",
+          "expectedStatus": 200,
+          "assertions": [
+            {
+              "path": "/tenant",
+              "operator": "equals",
+              "value": "A"
+            },
+            {
+              "path": "/password",
+              "operator": "absent"
+            }
+          ]
+        },
+        {
+          "id": "viewer-a-PUT-a1",
+          "identityId": "viewer-a",
+          "scope": "own",
+          "method": "PUT",
+          "path": "/assets/a1",
+          "expectedStatus": 403,
+          "body": "{\"name\":\"Reviewed update\"}",
+          "state": {
+            "path": "/assets/a1",
+            "pointer": "",
+            "identityId": "editor-a"
+          }
+        },
+        {
+          "id": "viewer-a-GET-b1",
+          "identityId": "viewer-a",
+          "scope": "other",
+          "method": "GET",
+          "path": "/assets/b1",
+          "expectedStatus": 403
+        },
+        {
+          "id": "viewer-a-PUT-b1",
+          "identityId": "viewer-a",
+          "scope": "other",
+          "method": "PUT",
+          "path": "/assets/b1",
+          "expectedStatus": 403,
+          "body": "{\"name\":\"Reviewed update\"}"
+        }
+      ],
+      "spec": {
+        "openapi": "3.0.3",
+        "info": {
+          "title": "RuleProof fixture: project assets",
+          "version": "1.0.0",
+          "description": "Synthetic tenant-scoped asset API. Tokens are public demo labels."
+        },
+        "paths": {
+          "/assets/{id}": {
+            "parameters": [
+              {
+                "name": "id",
+                "in": "path",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            ],
+            "get": {
+              "operationId": "getAsset",
+              "summary": "Read an asset",
+              "responses": {
+                "200": {
+                  "description": "The asset"
+                },
+                "403": {
+                  "description": "Forbidden"
+                }
+              }
+            },
+            "put": {
+              "operationId": "updateAsset",
+              "summary": "Update an asset",
+              "responses": {
+                "200": {
+                  "description": "Updated"
+                },
+                "403": {
+                  "description": "Forbidden"
+                }
+              }
+            }
+          },
+          "/assets/{id}/export": {
+            "parameters": [
+              {
+                "name": "id",
+                "in": "path",
+                "required": true,
+                "schema": {
+                  "type": "string"
+                }
+              }
+            ],
+            "get": {
+              "operationId": "exportAsset",
+              "summary": "Export an asset as CSV",
+              "responses": {
+                "200": {
+                  "description": "CSV export"
+                },
+                "403": {
+                  "description": "Forbidden"
+                }
+              }
+            }
+          }
+        }
+      },
+      "exclusions": {
+        "GET /assets/{id}/export": "Export is reviewed in a separate suite."
+      },
+      "dataVersion": "synthetic-v1"
+    },
+    "hash": "a4cda23f874eeabb1e953f16585a5dd2c0660c9744dfcd5d7ce7d5890c6b62a5",
+    "author": "Demo author",
+    "approvedBy": "Demo reviewer",
+    "createdAt": "2026-10-26T00:00:00Z"
+  }
+}

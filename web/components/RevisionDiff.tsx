@@ -1,17 +1,17 @@
-"use client";
+'use client';
 
-import { ArrowRight, GitCompareArrows, Loader2, ShieldOff } from "lucide-react";
-import { cn } from "@/lib/cn";
-import type { PlanDiff } from "@/lib/types";
-import AssumptionChanges from "./revision-diff/AssumptionChanges";
-import Block from "./revision-diff/Block";
-import CaseRow from "./revision-diff/CaseRow";
-import ConceptChanges from "./revision-diff/ConceptChanges";
-import SummaryChips from "./revision-diff/SummaryChips";
-import TextDiff from "./revision-diff/TextDiff";
+import { ArrowRight, GitCompareArrows, Loader2, ShieldOff } from 'lucide-react';
+import { cn } from '@/lib/cn';
+import type { PlanDiff } from '@/lib/types';
+import AssumptionChanges from './revision-diff/AssumptionChanges';
+import Block from './revision-diff/Block';
+import CaseRow from './revision-diff/CaseRow';
+import ConceptChanges from './revision-diff/ConceptChanges';
+import SummaryChips from './revision-diff/SummaryChips';
+import TextDiff from './revision-diff/TextDiff';
 
 // Kept so existing `import { useRevisionDiff } from "./RevisionDiff"` callers work.
-export { default as useRevisionDiff } from "@/hooks/useRevisionDiff";
+export { default as useRevisionDiff } from '@/hooks/useRevisionDiff';
 
 const RevisionDiff = ({
   diff,
@@ -36,11 +36,15 @@ const RevisionDiff = ({
     );
   }
   if (error) {
-    return <div className="rounded-xl border border-fail/30 bg-fail/5 px-4 py-3 text-sm text-fail">{error}</div>;
+    return (
+      <div className="rounded-xl border border-fail/30 bg-fail/5 px-4 py-3 text-sm text-fail">
+        {error}
+      </div>
+    );
   }
   if (!diff) return null;
 
-  const changed = diff.cases.filter((c) => c.change === "changed").length;
+  const changed = diff.cases.filter((c) => c.change === 'changed').length;
   const conceptsChanged = diff.conceptsAdded.length + diff.conceptsRemoved.length > 0;
   const assumptionsChanged = diff.assumptionsAdded.length + diff.assumptionsRemoved.length > 0;
 
@@ -57,7 +61,7 @@ const RevisionDiff = ({
         <SummaryChips diff={diff} changed={changed} />
       </header>
 
-      <div className={cn("space-y-5 px-4 py-4", compact && "space-y-4")}>
+      <div className={cn('space-y-5 px-4 py-4', compact && 'space-y-4')}>
         {diff.textChanged && (
           <Block title="Rule wording">
             <TextDiff ops={diff.text} />
@@ -89,7 +93,8 @@ const RevisionDiff = ({
         {diff.approvalReset && (
           <p className="flex gap-2 text-xs leading-relaxed text-ink-faint">
             <ShieldOff size={14} className="mt-px shrink-0 text-fail/80" />
-            {baseLabel} was approved, but that approval covered a different plan. Approve {headLabel} before it can run.
+            {baseLabel} was approved, but that approval covered a different plan. Approve{' '}
+            {headLabel} before it can run.
           </p>
         )}
         {!diff.planChanged && (

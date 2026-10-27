@@ -1,14 +1,8 @@
-"use client";
+'use client';
 
-import type { PlanCase } from "@/lib/types";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../ui/select";
-import { ACTION_LABEL, ROLE_LABEL, SCOPE_LABEL } from "@/constants/labels";
+import type { PlanCase } from '@/lib/types';
+import { ACTION_LABEL, ROLE_LABEL, SCOPE_LABEL } from '@/constants/labels';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 const EditSelect = ({
   c,

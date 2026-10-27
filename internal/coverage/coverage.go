@@ -49,10 +49,6 @@ func Analyze(specJSON []byte, cases []rules.Case, ruleText string) (Report, erro
 	if err := json.Unmarshal(specJSON, &s); err != nil {
 		return Report{}, fmt.Errorf("parse OpenAPI spec: %w", err)
 	}
-	checks := map[string]int{}
-	for _, c := range cases {
-		checks[c.Action]++
-	}
 
 	paths := make([]string, 0, len(s.Paths))
 	for p := range s.Paths {
@@ -62,9 +58,6 @@ func Analyze(specJSON []byte, cases []rules.Case, ruleText string) (Report, erro
 
 	r := Report{SpecTitle: s.Info.Title}
 	for _, path := range paths {
-		if !strings.Contains(path, "{") {
-			continue
-		}
 		for _, m := range methods {
 			raw, ok := s.Paths[path][m]
 			if !ok {
@@ -80,7 +73,17 @@ func Analyze(specJSON []byte, cases []rules.Case, ruleText string) (Report, erro
 				OperationID: meta.OperationID, Summary: meta.Summary,
 				Action: action(m, path),
 			}
-			op.Checks = checks[op.Action]
+			for _, c := range cases {
+				eligible := []string{}
+				for _, candidate := range paths {
+					if _, ok := s.Paths[candidate][strings.ToLower(c.Method)]; ok {
+						eligible = append(eligible, candidate)
+					}
+				}
+				if c.Method == op.Method && BestPath(eligible, rules.CasePath(c)) == path {
+					op.Checks++
+				}
+			}
 			op.Covered = op.Checks > 0
 			op.Snippet, op.Supported = rules.ActionSnippet(ruleText, op.Action)
 			if !op.Covered {
@@ -94,6 +97,44 @@ func Analyze(specJSON []byte, cases []rules.Case, ruleText string) (Report, erro
 	}
 	r.Total = len(r.Operations)
 	return r, nil
+}
+
+// BestPath gives literal routes precedence over parameterized routes.
+func BestPath(templates []string, path string) string {
+	best, score := "", -1
+	for _, template := range templates {
+		if !MatchPath(template, path) {
+			continue
+		}
+		literal := 0
+		for _, part := range strings.Split(template, "/") {
+			if !strings.HasPrefix(part, "{") {
+				literal++
+			}
+		}
+		if literal > score || (literal == score && template < best) {
+			best, score = template, literal
+		}
+	}
+	return best
+}
+
+// MatchPath compares complete segments, never action labels or substrings.
+func MatchPath(template, path string) bool {
+	path, _, _ = strings.Cut(path, "?")
+	a, b := strings.Split(template, "/"), strings.Split(path, "/")
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if strings.HasPrefix(a[i], "{") && strings.HasSuffix(a[i], "}") && b[i] != "" {
+			continue
+		}
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }
 
 // action names what an operation does: a literal segment after the object ID

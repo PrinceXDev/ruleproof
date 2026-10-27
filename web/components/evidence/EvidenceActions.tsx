@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { Check, Copy, Download } from "lucide-react";
-import { downloadJson } from "@/lib/download";
+import { useState } from 'react';
+import { Check, Copy, Download } from 'lucide-react';
+import { downloadJson } from '@/lib/download';
 
 const actionClass =
-  "flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs text-ink-muted hover:text-ink";
+  'flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs text-ink-muted hover:text-ink';
 
 // Copy / download one check's evidence record.
 const EvidenceActions = ({ resultId, json }: { resultId: string; json: string }) => {
@@ -28,9 +28,13 @@ const EvidenceActions = ({ resultId, json }: { resultId: string; json: string })
     <div className="flex items-center gap-2 border-t border-border px-5 py-3.5">
       <button type="button" onClick={copyEvidence} className={actionClass}>
         {copied ? <Check size={13} className="text-pass" /> : <Copy size={13} />}
-        {copied ? "Copied" : "Copy evidence"}
+        {copied ? 'Copied' : 'Copy evidence'}
       </button>
-      <button type="button" onClick={() => downloadJson(`ruleproof-evidence-${resultId}.json`, json)} className={actionClass}>
+      <button
+        type="button"
+        onClick={() => downloadJson(`ruleproof-evidence-${resultId}.json`, json)}
+        className={actionClass}
+      >
         <Download size={13} />
         Download JSON
       </button>

@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef } from 'react';
 
-const FOCUSABLE = 'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
+import { FOCUSABLE } from '@/constants/accessibility';
 
 /**
  * Minimal accessible dialog behavior: traps Tab focus inside the container
@@ -14,7 +14,7 @@ export const useDialog = <T extends HTMLElement>(open: boolean, onClose: () => v
   const triggerRef = useRef<Element | null>(null);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) return undefined;
     triggerRef.current = document.activeElement;
     const container = ref.current;
     const focusables = () => Array.from(container?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? []);
@@ -23,12 +23,12 @@ export const useDialog = <T extends HTMLElement>(open: boolean, onClose: () => v
     first?.focus();
 
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
+      if (e.key === 'Escape') {
         e.stopPropagation();
         onClose();
         return;
       }
-      if (e.key !== "Tab") return;
+      if (e.key !== 'Tab') return;
       const items = focusables();
       if (items.length === 0) return;
       const firstEl = items[0];
@@ -42,9 +42,9 @@ export const useDialog = <T extends HTMLElement>(open: boolean, onClose: () => v
       }
     };
 
-    document.addEventListener("keydown", onKeyDown, true);
+    document.addEventListener('keydown', onKeyDown, true);
     return () => {
-      document.removeEventListener("keydown", onKeyDown, true);
+      document.removeEventListener('keydown', onKeyDown, true);
       if (triggerRef.current instanceof HTMLElement) {
         triggerRef.current.focus();
       }

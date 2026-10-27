@@ -1,11 +1,11 @@
-import { TerminalSquare } from "lucide-react";
-import type { Plan } from "@/lib/types";
-import CopyButton from "../landing/CopyButton";
+import { TerminalSquare } from 'lucide-react';
+import type { Plan } from '@/lib/types';
+import CopyButton from '../landing/CopyButton';
 
 // Points from a one-off run to keeping the rule enforced: the exported
 // bundle is exactly what cmd/ruleproof-ci verifies and re-runs.
 const CiHint = ({ plan, bypass }: { plan: Plan; bypass: boolean }) => {
-  const flags = bypass ? "-fixture fixed -bypass" : "-fixture fixed";
+  const flags = bypass ? '-fixture fixed -bypass' : '-fixture fixed';
   const commands = [
     `go run ./cmd/ruleproof-ci -bundle ruleproof-plan-${plan.id}.json ${flags}`,
     `go run ./cmd/ruleproof-ci -server http://localhost:8080 -plan ${plan.id} ${flags}`,
@@ -16,8 +16,8 @@ const CiHint = ({ plan, bypass }: { plan: Plan; bypass: boolean }) => {
         <TerminalSquare size={16} className="text-brand" /> Keep this rule enforced in CI
       </h2>
       <p className="mt-1.5 text-sm text-ink-muted">
-        Export this approved plan and run it on every push. The build fails on any mismatch, and the CLI refuses
-        plans that are unapproved or were edited after approval.
+        Export this approved plan and run it on every push. The build fails on any mismatch, and the
+        CLI refuses plans that are unapproved or were edited after approval.
       </p>
       <div className="mt-4 space-y-2">
         {commands.map((cmd) => (
@@ -32,8 +32,9 @@ const CiHint = ({ plan, bypass }: { plan: Plan; bypass: boolean }) => {
         ))}
       </div>
       <p className="mt-3 text-xs text-ink-faint">
-        Exit code 0 = all checks passed · 1 = mismatch · 2 = invalid or unapproved plan. Writes GitHub annotations,
-        a job summary, and JUnit XML with <code className="font-mono">-junit</code>.
+        Exit code 0 = all checks passed · 1 = mismatch · 2 = invalid or unapproved plan. Writes
+        GitHub annotations, a job summary, and JUnit XML with{' '}
+        <code className="font-mono">-junit</code>.
       </p>
     </section>
   );

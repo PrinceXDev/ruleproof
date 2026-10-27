@@ -1,15 +1,23 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { CheckCircle2, Clock, DoorOpen, FileText, GitBranch, GitCompareArrows, XCircle } from "lucide-react";
-import clsx from "clsx";
-import type { History, Run } from "@/lib/types";
-import { FIXTURE_LABEL } from "@/constants/fixtures";
-import { reportPath } from "@/lib/report";
-import Badge from "./Badge";
-import RevisionDiff, { useRevisionDiff } from "./RevisionDiff";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { KIND_LABEL } from "@/constants/labels";
+import { useState } from 'react';
+import {
+  CheckCircle2,
+  Clock,
+  DoorOpen,
+  FileText,
+  GitBranch,
+  GitCompareArrows,
+  XCircle,
+} from 'lucide-react';
+import clsx from 'clsx';
+import type { History, Run } from '@/lib/types';
+import { FIXTURE_LABEL } from '@/constants/fixtures';
+import { reportPath } from '@/lib/report';
+import { KIND_LABEL } from '@/constants/labels';
+import Badge from './Badge';
+import RevisionDiff, { useRevisionDiff } from './RevisionDiff';
+import RevisionPicker from './history/RevisionPicker';
 
 const HistoryPanel = ({
   history,
@@ -36,7 +44,9 @@ const HistoryPanel = ({
     return (
       <div className="mx-auto max-w-3xl px-6 py-16 text-center">
         <GitBranch className="mx-auto mb-3 text-ink-faint" size={28} />
-        <p className="text-sm text-ink-muted">No checks yet. Explain a rule to start building history.</p>
+        <p className="text-sm text-ink-muted">
+          No checks yet. Explain a rule to start building history.
+        </p>
       </div>
     );
   }
@@ -44,9 +54,13 @@ const HistoryPanel = ({
   return (
     <div className="mx-auto max-w-3xl px-6 py-10">
       <h1 className="text-xl font-semibold tracking-tight text-ink">Run history</h1>
-      <p className="mt-1 text-sm text-ink-muted">Every revision and run for this rule, oldest revision first.</p>
+      <p className="mt-1 text-sm text-ink-muted">
+        Every revision and run for this rule, oldest revision first.
+      </p>
 
-      <h2 className="mb-2 mt-7 text-xs font-medium uppercase tracking-wider text-ink-faint">Revisions</h2>
+      <h2 className="mb-2 mt-7 text-xs font-medium uppercase tracking-wider text-ink-faint">
+        Revisions
+      </h2>
       <ol className="space-y-2">
         {history.lineage.map((p, i) => (
           <li
@@ -67,7 +81,9 @@ const HistoryPanel = ({
                   <GitCompareArrows size={13} /> Compare with {i}
                 </button>
               )}
-              <Badge tone={p.approved ? "pass" : "neutral"}>{p.approved ? "Approved" : "Unapproved"}</Badge>
+              <Badge tone={p.approved ? 'pass' : 'neutral'}>
+                {p.approved ? 'Approved' : 'Unapproved'}
+              </Badge>
             </div>
           </li>
         ))}
@@ -76,7 +92,9 @@ const HistoryPanel = ({
       {lineage.length > 1 && base && head && (
         <>
           <div className="mb-2 mt-7 flex flex-wrap items-center gap-2">
-            <h2 className="mr-auto text-xs font-medium uppercase tracking-wider text-ink-faint">Compare revisions</h2>
+            <h2 className="mr-auto text-xs font-medium uppercase tracking-wider text-ink-faint">
+              Compare revisions
+            </h2>
             <RevisionPicker
               label="Base revision"
               value={base}
@@ -109,7 +127,9 @@ const HistoryPanel = ({
         </>
       )}
 
-      <h2 className="mb-2 mt-7 text-xs font-medium uppercase tracking-wider text-ink-faint">Runs</h2>
+      <h2 className="mb-2 mt-7 text-xs font-medium uppercase tracking-wider text-ink-faint">
+        Runs
+      </h2>
       {history.runs.length === 0 ? (
         <p className="text-sm text-ink-faint">No runs yet.</p>
       ) : (
@@ -129,15 +149,28 @@ const HistoryPanel = ({
                   </Badge>
                 </div>
                 <div className="flex items-center gap-3 font-mono-tnum text-xs">
-                  <span className={clsx("flex items-center gap-1", run.passCount > 0 ? "text-pass" : "text-ink-faint")}>
+                  <span
+                    className={clsx(
+                      'flex items-center gap-1',
+                      run.passCount > 0 ? 'text-pass' : 'text-ink-faint',
+                    )}
+                  >
                     <CheckCircle2 size={13} /> {run.passCount}
                   </span>
-                  <span className={clsx("flex items-center gap-1", run.failCount > 0 ? "text-fail" : "text-ink-faint")}>
+                  <span
+                    className={clsx(
+                      'flex items-center gap-1',
+                      run.failCount > 0 ? 'text-fail' : 'text-ink-faint',
+                    )}
+                  >
                     <XCircle size={13} /> {run.failCount}
                   </span>
                   {run.bypass && (
                     <span
-                      className={clsx("flex items-center gap-1", run.bypass.leaked > 0 ? "text-fail" : "text-ink-faint")}
+                      className={clsx(
+                        'flex items-center gap-1',
+                        run.bypass.leaked > 0 ? 'text-fail' : 'text-ink-faint',
+                      )}
                       title="Bypass attempts that got through"
                     >
                       <DoorOpen size={13} /> {run.bypass.leaked}
@@ -164,30 +197,3 @@ const HistoryPanel = ({
 };
 
 export default HistoryPanel;
-
-const RevisionPicker = ({
-  label,
-  value,
-  options,
-  nameOf,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  options: string[];
-  nameOf: (id: string) => string;
-  onChange: (id: string) => void;
-}) => (
-  <Select value={value} onValueChange={onChange}>
-    <SelectTrigger aria-label={label} className="min-h-9 min-w-32 py-1.5 text-xs">
-      <SelectValue />
-    </SelectTrigger>
-    <SelectContent>
-      {options.map((id) => (
-        <SelectItem key={id} value={id}>
-          {nameOf(id)}
-        </SelectItem>
-      ))}
-    </SelectContent>
-  </Select>
-);

@@ -1,13 +1,13 @@
-"use client";
+'use client';
 
-import { useRef } from "react";
-import type { Plan } from "@/lib/types";
-import useRevisionDiff from "@/hooks/useRevisionDiff";
-import useStaggerReveal from "@/hooks/useStaggerReveal";
-import CoveragePanel from "./CoveragePanel";
-import RevisionDiff from "./RevisionDiff";
-import ApproveBar from "./review/ApproveBar";
-import ReviewTable from "./review/ReviewTable";
+import { useRef } from 'react';
+import type { Plan } from '@/lib/types';
+import useRevisionDiff from '@/hooks/useRevisionDiff';
+import useStaggerReveal from '@/hooks/useStaggerReveal';
+import CoveragePanel from './CoveragePanel';
+import RevisionDiff from './RevisionDiff';
+import ApproveBar from './review/ApproveBar';
+import ReviewTable from './review/ReviewTable';
 
 const ReviewScreen = ({
   plan,
@@ -29,7 +29,9 @@ const ReviewScreen = ({
   editingPending: boolean;
 }) => {
   const rootRef = useRef<HTMLDivElement>(null);
-  useStaggerReveal(rootRef, "[data-review-row]", { y: 6, duration: 0.35, stagger: 0.03 }, [plan.id]);
+  useStaggerReveal(rootRef, '[data-review-row]', { y: 6, duration: 0.35, stagger: 0.03 }, [
+    plan.id,
+  ]);
 
   const diff = useRevisionDiff(plan.parentPlanId ? plan.id : null, plan.parentPlanId);
   const revisionName = (id: string, fallback: string) => {
@@ -39,12 +41,10 @@ const ReviewScreen = ({
 
   return (
     <div ref={rootRef} className="mx-auto max-w-5xl px-6 py-10 pb-28">
-      <h1 className="text-2xl font-semibold tracking-tight text-ink">
-        Your rule, made testable.
-      </h1>
+      <h1 className="text-2xl font-semibold tracking-tight text-ink">Your rule, made testable.</h1>
       <p className="mt-1.5 text-sm text-ink-muted">
-        “Allow” and “Deny” are policy expectations. “Passed” and “Failed”
-        describe execution results — they appear once you run checks in Verify.
+        “Allow” and “Deny” are policy expectations. “Passed” and “Failed” describe execution results
+        — they appear once you run checks in Verify.
       </p>
 
       <div
@@ -60,8 +60,8 @@ const ReviewScreen = ({
             diff={diff.diff}
             loading={diff.loading}
             error={diff.error}
-            baseLabel={revisionName(plan.parentPlanId, "Previous revision")}
-            headLabel={revisionName(plan.id, "This revision")}
+            baseLabel={revisionName(plan.parentPlanId, 'Previous revision')}
+            headLabel={revisionName(plan.id, 'This revision')}
             compact
           />
         </div>
@@ -70,12 +70,25 @@ const ReviewScreen = ({
       <div className="mt-4">
         <CoveragePanel planId={plan.id} onAddSentence={onAddSentence} />
       </div>
+      {plan.conflicts?.map((conflict) => (
+        <div
+          key={`${conflict.role}-${conflict.action}-${conflict.scope}`}
+          role="alert"
+          className="mt-4 rounded-lg border border-fail/30 bg-fail/5 p-4 text-sm text-fail"
+        >
+          <strong>
+            Conflicting rule: {conflict.role} · {conflict.action} · {conflict.scope}
+          </strong>
+          {conflict.sentences.map((sentence) => (
+            <p key={sentence} className="mt-2">
+              {sentence}
+            </p>
+          ))}
+          <p className="mt-2">Revise the wording to resolve this conflict before approval.</p>
+        </div>
+      ))}
 
-      <ReviewTable
-        cases={plan.cases}
-        onEdit={onEdit}
-        disabled={editingPending || approving}
-      />
+      <ReviewTable cases={plan.cases} onEdit={onEdit} disabled={editingPending || approving} />
 
       <ApproveBar
         plan={plan}

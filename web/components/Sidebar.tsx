@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import clsx from "clsx";
-import Link from "next/link";
-import Logo from "./landing/Logo";
-import { X } from "lucide-react";
-import { STUDIO_SECTIONS, type Section } from "@/constants/navigation";
+import clsx from 'clsx';
+import Link from 'next/link';
+import { X } from 'lucide-react';
+import { STUDIO_SECTIONS, type Section } from '@/constants/navigation';
+import Logo from './landing/Logo';
 
 const Sidebar = ({
   section,
@@ -21,13 +21,17 @@ const Sidebar = ({
 }) => (
   <>
     {mobileOpen && (
-      <div className="fixed inset-0 z-40 bg-black/50 md:hidden" onClick={onMobileClose} aria-hidden />
+      <div
+        className="fixed inset-0 z-40 bg-black/50 md:hidden"
+        onClick={onMobileClose}
+        aria-hidden
+      />
     )}
     <aside
       className={clsx(
-        "fixed inset-y-0 left-0 z-50 flex h-full w-56 shrink-0 flex-col justify-between border-r border-border bg-sidebar px-3 py-4 transition-transform duration-200",
-        "md:static md:z-auto md:translate-x-0",
-        mobileOpen ? "translate-x-0" : "-translate-x-full"
+        'fixed inset-y-0 left-0 z-50 flex h-full w-56 shrink-0 flex-col justify-between border-r border-border bg-sidebar px-3 py-4 transition-transform duration-200',
+        'md:static md:z-auto md:translate-x-0',
+        mobileOpen ? 'translate-x-0' : '-translate-x-full',
       )}
     >
       <div>
@@ -46,8 +50,12 @@ const Sidebar = ({
         </div>
 
         <div className="mb-4 px-2">
-          <div className="text-[10px] font-medium uppercase tracking-wider text-ink-faint">Project</div>
-          <div className="mt-1 truncate text-sm text-ink-muted">Asset Workspace</div>
+          <div className="text-[10px] font-medium uppercase tracking-wider text-ink-faint">
+            Project
+          </div>
+          <div className="mt-1 truncate text-sm text-ink-muted">
+            {section === 'workbench' ? 'Authorization suites' : 'Asset Workspace'}
+          </div>
         </div>
 
         <nav className="flex flex-col gap-0.5" aria-label="Sections">
@@ -59,12 +67,12 @@ const Sidebar = ({
                 onSelect(id);
                 onMobileClose();
               }}
-              aria-current={section === id ? "page" : undefined}
+              aria-current={section === id ? 'page' : undefined}
               className={clsx(
-                "flex items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm transition-colors",
+                'flex items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm transition-colors',
                 section === id
-                  ? "bg-panel-elevated text-ink"
-                  : "text-ink-muted hover:bg-panel-elevated/60 hover:text-ink"
+                  ? 'bg-panel-elevated text-ink'
+                  : 'text-ink-muted hover:bg-panel-elevated/60 hover:text-ink',
               )}
             >
               <Icon size={16} strokeWidth={1.8} />
@@ -77,9 +85,11 @@ const Sidebar = ({
       <div className="rounded-md border border-border bg-panel px-2.5 py-2 text-[11px] text-ink-faint">
         <div className="flex items-center gap-1.5">
           <span className="h-1.5 w-1.5 rounded-full bg-attn" aria-hidden />
-          Sample environment
+          {section === 'workbench' ? 'Reviewed authorization' : 'Sample environment'}
         </div>
-        <div className="mt-0.5">Synthetic fixtures · {driver ?? "…"}</div>
+        <div className="mt-0.5">
+          {section === 'workbench' ? 'Revision history' : 'Synthetic fixtures'} · {driver ?? '…'}
+        </div>
       </div>
     </aside>
   </>

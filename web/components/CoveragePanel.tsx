@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { CheckCircle2, FileJson, Loader2, Plus, ShieldAlert } from "lucide-react";
-import { api } from "@/lib/api";
-import type { CoverageReport } from "@/lib/types";
-import Badge from "./Badge";
+import { useEffect, useState } from 'react';
+import { CheckCircle2, FileJson, Loader2, Plus, ShieldAlert } from 'lucide-react';
+import { api } from '@/lib/api';
+import type { CoverageReport } from '@/lib/types';
+import Badge from './Badge';
 
 type State = { planId: string; report: CoverageReport | null; error: string | null };
 
@@ -15,7 +15,7 @@ const CoveragePanel = ({
   planId: string;
   onAddSentence: (sentence: string) => void;
 }) => {
-  const [state, setState] = useState<State>({ planId: "", report: null, error: null });
+  const [state, setState] = useState<State>({ planId: '', report: null, error: null });
 
   useEffect(() => {
     const controller = new AbortController();
@@ -23,8 +23,12 @@ const CoveragePanel = ({
       .coverage(planId, controller.signal)
       .then((report) => setState({ planId, report, error: null }))
       .catch((e: unknown) => {
-        if (e instanceof DOMException && e.name === "AbortError") return;
-        setState({ planId, report: null, error: e instanceof Error ? e.message : "Could not load coverage." });
+        if (e instanceof DOMException && e.name === 'AbortError') return;
+        setState({
+          planId,
+          report: null,
+          error: e instanceof Error ? e.message : 'Could not load coverage.',
+        });
       });
     return () => controller.abort();
   }, [planId]);
@@ -37,14 +41,21 @@ const CoveragePanel = ({
     );
   }
   if (state.error || !state.report) {
-    return <div className="rounded-xl border border-fail/30 bg-fail/5 px-4 py-3 text-sm text-fail">{state.error}</div>;
+    return (
+      <div className="rounded-xl border border-fail/30 bg-fail/5 px-4 py-3 text-sm text-fail">
+        {state.error}
+      </div>
+    );
   }
 
   const { report } = state;
   const gaps = report.total - report.covered;
 
   return (
-    <section aria-label="API endpoint coverage" className="overflow-hidden rounded-xl border border-border bg-panel">
+    <section
+      aria-label="API endpoint coverage"
+      className="overflow-hidden rounded-xl border border-border bg-panel"
+    >
       <header className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
         <div className="flex items-center gap-2 text-sm">
           {gaps > 0 ? (
@@ -53,13 +64,17 @@ const CoveragePanel = ({
             <CheckCircle2 size={15} className="text-pass" />
           )}
           <span className="font-medium text-ink">
-            API coverage ·{" "}
+            API coverage ·{' '}
             <span className="font-mono-tnum">
               {report.covered} of {report.total}
-            </span>{" "}
+            </span>{' '}
             endpoints
           </span>
-          {gaps > 0 && <Badge tone="attn">{gaps === 1 ? "1 endpoint has no rule" : `${gaps} endpoints have no rule`}</Badge>}
+          {gaps > 0 && (
+            <Badge tone="attn">
+              {gaps === 1 ? '1 endpoint has no rule' : `${gaps} endpoints have no rule`}
+            </Badge>
+          )}
         </div>
         <a
           href="/api/fixtures/openapi.json"
@@ -73,23 +88,26 @@ const CoveragePanel = ({
 
       <ul className="divide-y divide-border">
         {report.operations.map((op) => (
-          <li key={`${op.method} ${op.path}`} className="flex flex-col gap-2 px-4 py-3 text-sm md:flex-row md:items-start">
+          <li
+            key={`${op.method} ${op.path}`}
+            className="flex flex-col gap-2 px-4 py-3 text-sm md:flex-row md:items-start"
+          >
             <div className="flex min-w-0 items-center gap-2 md:w-72 md:shrink-0">
               <span className="w-10 font-mono-tnum text-xs text-ink-faint">{op.method}</span>
               <span className="truncate font-mono-tnum text-ink">{op.path}</span>
             </div>
             {op.covered ? (
               <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 text-ink-muted">
-                <Badge tone="pass">
-                  {op.checks} checks
-                </Badge>
-                {op.snippet && <span className="min-w-0 truncate text-xs italic">“{op.snippet}”</span>}
+                <Badge tone="pass">{op.checks} checks</Badge>
+                {op.snippet && (
+                  <span className="min-w-0 truncate text-xs italic">“{op.snippet}”</span>
+                )}
               </div>
             ) : (
               <div className="flex min-w-0 flex-1 flex-col gap-2">
                 <p className="text-ink-muted">
-                  Your rule says nothing about <span className="text-attn">{op.action}</span>, so nothing tests who can
-                  call it.
+                  Your rule says nothing about <span className="text-attn">{op.action}</span>, so
+                  nothing tests who can call it.
                 </p>
                 {op.supported && op.suggestion ? (
                   <div className="flex flex-wrap items-center gap-2">
@@ -105,7 +123,9 @@ const CoveragePanel = ({
                     </button>
                   </div>
                 ) : (
-                  <p className="text-xs text-ink-faint">“{op.action}” is not in RuleProof’s vocabulary yet.</p>
+                  <p className="text-xs text-ink-faint">
+                    “{op.action}” is not in RuleProof’s vocabulary yet.
+                  </p>
                 )}
               </div>
             )}

@@ -1,10 +1,10 @@
-export type Role = "viewer" | "editor";
-export type ActionKind = "read" | "update" | "export";
-export type Scope = "own" | "other";
-export type ExpectedLabel = "allow" | "deny" | "unauthenticated" | "not found" | "unexpected";
-export type Verdict = "pass" | "fail" | "error";
-export type Fixture = "broken" | "partial" | "fixed";
-export type PlanKind = "root" | "revision" | "edit";
+export type Role = 'viewer' | 'editor';
+export type ActionKind = 'read' | 'update' | 'export';
+export type Scope = 'own' | 'other';
+export type ExpectedLabel = 'allow' | 'deny' | 'unauthenticated' | 'not found' | 'unexpected';
+export type Verdict = 'pass' | 'fail' | 'error';
+export type Fixture = 'broken' | 'partial' | 'fixed';
+export type PlanKind = 'root' | 'revision' | 'edit';
 
 export interface PlanCase {
   id: string;
@@ -26,6 +26,12 @@ export interface Concept {
 }
 
 export interface Plan {
+  conflicts?: {
+    role: string;
+    action: string;
+    scope: string;
+    sentences: string[];
+  }[];
   id: string;
   rootPlanId: string;
   parentPlanId?: string;
@@ -42,6 +48,9 @@ export interface Plan {
 }
 
 export interface CheckResult {
+  truncated?: boolean;
+  redacted?: boolean;
+  assertionResults?: { path: string; operator: string; passed: boolean }[];
   id: string;
   rule: string;
   actor: string;
@@ -97,7 +106,7 @@ export interface ApiError {
 }
 
 export interface TextOp {
-  op: "equal" | "insert" | "delete";
+  op: 'equal' | 'insert' | 'delete';
   text: string;
 }
 
@@ -108,7 +117,7 @@ export interface CaseChange {
   scope: Scope;
   method: string;
   assetId: string;
-  change: "changed" | "added" | "removed";
+  change: 'changed' | 'added' | 'removed';
   fromStatus?: number;
   toStatus?: number;
   fromLabel?: ExpectedLabel;

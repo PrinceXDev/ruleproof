@@ -7,7 +7,7 @@ package rules
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"fmt"
+	"encoding/json"
 	"strings"
 )
 
@@ -350,10 +350,8 @@ func findSnippetAny(text string, words ...string) (string, bool) {
 // method and expected status. Any edit to those produces a different hash.
 func Hash(cases []Case) string {
 	h := sha256.New()
-	for _, c := range cases {
-		fmt.Fprintf(h, "%s|%s|%d|", c.ID, c.Method, c.Want)
-	}
-	return hex.EncodeToString(h.Sum(nil))[:16]
+	_ = json.NewEncoder(h).Encode(cases)
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 // TokenForRole returns the public demo token of the fixed identity for role.

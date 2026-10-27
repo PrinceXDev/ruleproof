@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { ArrowUpRight, Menu, X } from "lucide-react";
-import { cn } from "@/lib/cn";
-import { buttonVariants } from "@/components/ui/button";
-import { GITHUB_URL, NAV_LINKS } from "@/constants/landing";
-import Logo from "./Logo";
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { ArrowUpRight, Menu, X } from 'lucide-react';
+import { cn } from '@/lib/cn';
+import { buttonVariants } from '@/components/ui/button';
+import { GITHUB_URL, NAV_LINKS } from '@/constants/landing';
+import Logo from './Logo';
 
 const Nav = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -15,17 +15,17 @@ const Nav = () => {
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
     onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
   return (
     <header
       className={cn(
-        "fixed inset-x-0 top-0 z-50 transition-[background-color,border-color,backdrop-filter] duration-300",
+        'fixed inset-x-0 top-0 z-50 transition-[background-color,border-color,backdrop-filter] duration-300',
         scrolled || open
-          ? "border-b border-white/[.07] bg-[#0d0f0e]/75 backdrop-blur-xl"
-          : "border-b border-transparent",
+          ? 'border-b border-white/[.07] bg-[#0d0f0e]/75 backdrop-blur-xl'
+          : 'border-b border-transparent',
       )}
     >
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-6 px-4 sm:px-8">
@@ -46,19 +46,22 @@ const Nav = () => {
         <div className="ml-auto flex items-center gap-2">
           <a
             href={GITHUB_URL}
-            className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "hidden sm:inline-flex")}
+            className={cn(
+              buttonVariants({ variant: 'ghost', size: 'sm' }),
+              'hidden sm:inline-flex',
+            )}
           >
             GitHub
           </a>
-          <Link href="/studio/" className={buttonVariants({ size: "sm" })}>
+          <Link href="/studio/" className={buttonVariants({ size: 'sm' })}>
             Open studio <ArrowUpRight size={15} />
           </Link>
           <button
             type="button"
             aria-expanded={open}
-            aria-label={open ? "Close menu" : "Open menu"}
+            aria-label={open ? 'Close menu' : 'Open menu'}
             onClick={() => setOpen((o) => !o)}
-            className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "px-2 lg:hidden")}
+            className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }), 'px-2 lg:hidden')}
           >
             {open ? <X size={18} /> : <Menu size={18} />}
           </button>

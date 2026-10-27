@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useCallback, useState } from "react";
-import { api } from "@/lib/api";
-import type { History, Plan } from "@/lib/types";
+import { useCallback, useState } from 'react';
+import { api } from '@/lib/api';
+import type { History, Plan } from '@/lib/types';
 
 // The plan on screen plus its revision lineage and runs.
 const usePlanHistory = () => {
@@ -18,17 +18,20 @@ const usePlanHistory = () => {
       // Non-fatal: the current plan/run state is already correct without
       // history, so this only degrades the History panel and revision
       // label — but it should still be visible for debugging.
-      console.error("failed to refresh history:", e);
+      console.error('failed to refresh history:', e);
       return null;
     }
   }, []);
 
-  const revisionLabel =
-    history && plan
-      ? `Revision ${history.lineage.findIndex((p) => p.id === plan.id) + 1} of ${history.lineage.length}`
-      : plan
-        ? "Revision 1"
-        : "No revision yet";
+  const revisionLabel = (() => {
+    if (history && plan) {
+      return `Revision ${history.lineage.findIndex((p) => p.id === plan.id) + 1} of ${history.lineage.length}`;
+    }
+    if (plan) {
+      return 'Revision 1';
+    }
+    return 'No revision yet';
+  })();
 
   return { plan, setPlan, history, setHistory, refreshHistory, revisionLabel };
 };

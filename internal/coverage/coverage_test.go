@@ -54,7 +54,18 @@ func TestUnknownActionIsUnsupported(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if r.Total != 1 || r.Operations[0].Action != "delete" || r.Operations[0].Supported {
-		t.Fatalf("want one unsupported delete operation (collection skipped), got %+v", r)
+	if r.Total != 2 || r.Operations[1].Action != "delete" || r.Operations[1].Supported {
+		t.Fatalf("want collection and unsupported delete operation, got %+v", r)
+	}
+}
+
+func TestCoverageDoesNotConflateRoutesOrMethods(t *testing.T) {
+	spec := []byte(`{"paths":{"/assets/{id}":{"get":{},"patch":{}},"/users/{id}":{"get":{}},"/assets": {"get":{}}}}`)
+	report, err := coverage.Analyze(spec, rules.Parse(sampleRule).Cases, sampleRule)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.Total != 4 || report.Covered != 1 {
+		t.Fatalf("coverage inflated: %+v", report)
 	}
 }

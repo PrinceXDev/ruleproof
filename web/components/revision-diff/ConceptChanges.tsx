@@ -1,5 +1,5 @@
-import { Minus, Plus } from "lucide-react";
-import type { Concept } from "@/lib/types";
+import { Minus, Plus } from 'lucide-react';
+import type { Concept } from '@/lib/types';
 
 const ConceptChanges = ({ added, removed }: { added: Concept[]; removed: Concept[] }) => (
   <div className="flex flex-wrap gap-1.5">

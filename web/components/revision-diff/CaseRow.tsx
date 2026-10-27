@@ -1,8 +1,8 @@
-import { ArrowRight } from "lucide-react";
-import type { CaseChange } from "@/lib/types";
-import { casePath, caseTitle } from "@/lib/caseText";
-import { SCOPE_LABEL } from "@/constants/labels";
-import Outcome from "./Outcome";
+import { ArrowRight } from 'lucide-react';
+import type { CaseChange } from '@/lib/types';
+import { casePath, caseTitle } from '@/lib/caseText';
+import { SCOPE_LABEL } from '@/constants/labels';
+import Outcome from './Outcome';
 
 const CaseRow = ({ c }: { c: CaseChange }) => (
   <li className="flex flex-wrap items-center gap-x-4 gap-y-2 bg-canvas/30 px-3.5 py-2.5 text-sm">
@@ -14,7 +14,7 @@ const CaseRow = ({ c }: { c: CaseChange }) => (
     </span>
     <span className="flex items-center gap-2 font-mono-tnum text-xs">
       {c.fromLabel ? (
-        <Outcome label={c.fromLabel} status={c.fromStatus} muted={c.change === "changed"} />
+        <Outcome label={c.fromLabel} status={c.fromStatus} muted={c.change === 'changed'} />
       ) : (
         <span className="text-ink-faint">new case</span>
       )}

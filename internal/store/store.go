@@ -166,6 +166,10 @@ var migrations = [][]string{
 	// 2: bypass attempts, kept apart from the approved checks.
 	{`ALTER TABLE runs ADD COLUMN variants_json TEXT NOT NULL DEFAULT '[]'`,
 		`ALTER TABLE runs ADD COLUMN bypass_catalog TEXT NOT NULL DEFAULT ''`},
+	{`CREATE TABLE suite_revisions (id TEXT PRIMARY KEY, workspace TEXT NOT NULL, parent_id TEXT NOT NULL, content TEXT NOT NULL, hash TEXT NOT NULL, author TEXT NOT NULL, approved_by TEXT NOT NULL, created_at TEXT NOT NULL)`,
+		`CREATE INDEX idx_suite_workspace ON suite_revisions(workspace, created_at)`,
+		`CREATE TABLE suite_events (id TEXT PRIMARY KEY, workspace TEXT NOT NULL, revision_id TEXT NOT NULL REFERENCES suite_revisions(id), actor TEXT NOT NULL, kind TEXT NOT NULL, content TEXT NOT NULL, created_at TEXT NOT NULL)`,
+		`CREATE INDEX idx_suite_events ON suite_events(workspace, revision_id, created_at)`},
 }
 
 func (s *Store) migrate() error {
@@ -433,14 +437,20 @@ func (s *Store) ApprovePlan(ctx context.Context, id string) (*Plan, error) {
 	if err != nil {
 		return nil, err
 	}
-	if p.Approved {
+	if p.Approved && p.Hash == rules.Hash(p.Cases) {
 		return p, nil
 	}
+	if len(rules.Conflicts(p.RuleText)) > 0 {
+		return nil, fmt.Errorf("%w: resolve contradictory rule sentences before approval", ErrValidation)
+	}
+
 	if len(p.Assumptions) > 0 && !p.AssumptionsAcknowledged {
 		return nil, fmt.Errorf("%w: assumptions must be acknowledged before approval", ErrValidation)
 	}
+
 	now := time.Now().UTC()
-	if _, err := s.exec(ctx, `UPDATE plans SET approved = 1, approved_at = ? WHERE id = ?`, now.Format(time.RFC3339Nano), id); err != nil {
+	p.Hash = rules.Hash(p.Cases)
+	if _, err := s.exec(ctx, `UPDATE plans SET approved = 1, approved_at = ?, hash = ? WHERE id = ?`, now.Format(time.RFC3339Nano), p.Hash, id); err != nil {
 		return nil, err
 	}
 	p.Approved = true
@@ -518,6 +528,9 @@ func (s *Store) RunPlan(ctx context.Context, planID, fixture, baseURL string, op
 	}
 	if !p.Approved {
 		return nil, fmt.Errorf("%w: plan is not approved", ErrConflict)
+	}
+	if len(rules.Conflicts(p.RuleText)) > 0 || p.Hash != rules.Hash(p.Cases) {
+		return nil, fmt.Errorf("%w: plan integrity or rule conflict requires review", ErrConflict)
 	}
 	cases := make([]check.Case, 0, len(p.Cases))
 	for _, c := range p.Cases {

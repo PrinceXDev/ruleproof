@@ -1,4 +1,4 @@
-import type { CheckResult, Plan, PlanCase, Run } from "./types";
+import type { CheckResult, Plan, PlanCase, Run } from './types';
 
 const safeParse = (body?: string) => {
   if (!body) return null;
@@ -16,12 +16,14 @@ export const evidenceJson = (
   planCase: PlanCase,
   plan: Plan,
   run: Run | null,
-  revisionLabel: string
+  revisionLabel: string,
 ): string =>
   JSON.stringify(
     {
       case: planCase.id,
-      bypassVariant: result.variant ? { kind: result.variant.kind, label: result.variant.label } : undefined,
+      bypassVariant: result.variant
+        ? { kind: result.variant.kind, label: result.variant.label }
+        : undefined,
       role: planCase.role,
       action: planCase.action,
       scope: planCase.scope,
@@ -40,5 +42,5 @@ export const evidenceJson = (
       responseBody: safeParse(result.body),
     },
     null,
-    2
+    2,
   );

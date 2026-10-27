@@ -1,11 +1,12 @@
-"use client";
-import { useRef, useState } from "react";
-import { gsap, useGSAP } from "@/lib/gsap";
-import DemoToolbar from "./product-demo/DemoToolbar";
-import DemoStepper from "./product-demo/DemoStepper";
-import ExplainStage from "./product-demo/ExplainStage";
-import ReviewStage from "./product-demo/ReviewStage";
-import VerifyStage from "./product-demo/VerifyStage";
+'use client';
+
+import { useRef, useState } from 'react';
+import { gsap, useGSAP } from '@/lib/gsap';
+import DemoToolbar from './product-demo/DemoToolbar';
+import DemoStepper from './product-demo/DemoStepper';
+import ExplainStage from './product-demo/ExplainStage';
+import ReviewStage from './product-demo/ReviewStage';
+import VerifyStage from './product-demo/VerifyStage';
 
 const ProductDemo = () => {
   const [stage, setStage] = useState(0);
@@ -17,10 +18,10 @@ const ProductDemo = () => {
   useGSAP(
     () => {
       const mm = gsap.matchMedia();
-      mm.add("(prefers-reduced-motion: no-preference)", () => {
-        gsap.from("[data-demo-content]", { y: 10, opacity: 0, duration: 0.35, ease: "power2.out" });
-        gsap.from("[data-matrix-item]", { opacity: 0, y: 8, duration: 0.3, stagger: 0.04 });
-        const evidence = ref.current?.querySelector("[data-evidence]");
+      mm.add('(prefers-reduced-motion: no-preference)', () => {
+        gsap.from('[data-demo-content]', { y: 10, opacity: 0, duration: 0.35, ease: 'power2.out' });
+        gsap.from('[data-matrix-item]', { opacity: 0, y: 8, duration: 0.3, stagger: 0.04 });
+        const evidence = ref.current?.querySelector('[data-evidence]');
         if (evidence) gsap.from(evidence, { x: 10, opacity: 0.4, duration: 0.3 });
       });
       return () => mm.revert();

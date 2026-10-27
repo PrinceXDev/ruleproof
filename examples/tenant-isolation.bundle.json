@@ -1,132 +1,132 @@
 {
-    "disclaimer": "A passing result means the approved scenarios passed. It does not prove the whole application is secure.",
-    "exportedAt": "2026-10-26T05:27:57.2584678Z",
-    "plan": {
-        "id": "79ffb19b-2a52-4541-99da-c0c25ba511b9",
-        "rootPlanId": "79ffb19b-2a52-4541-99da-c0c25ba511b9",
-        "kind": "root",
-        "ruleText": "Viewers can read assets in their own tenant. Editors can also update them. Neither role can access another tenant's assets.",
-        "cases": [
-            {
-                "id": "editor-a-read-a1",
-                "actor": "Editor \u00c2\u00b7 tenant A",
-                "role": "editor",
-                "action": "read",
-                "method": "GET",
-                "scope": "own",
-                "assetId": "a1",
-                "assetOwner": "A",
-                "expectedStatus": 200,
-                "expectedLabel": "allow"
-            },
-            {
-                "id": "editor-a-update-a1",
-                "actor": "Editor \u00c2\u00b7 tenant A",
-                "role": "editor",
-                "action": "update",
-                "method": "PUT",
-                "scope": "own",
-                "assetId": "a1",
-                "assetOwner": "A",
-                "expectedStatus": 200,
-                "expectedLabel": "allow"
-            },
-            {
-                "id": "editor-a-read-b1",
-                "actor": "Editor \u00c2\u00b7 tenant A",
-                "role": "editor",
-                "action": "read",
-                "method": "GET",
-                "scope": "other",
-                "assetId": "b1",
-                "assetOwner": "B",
-                "expectedStatus": 403,
-                "expectedLabel": "deny"
-            },
-            {
-                "id": "editor-a-update-b1",
-                "actor": "Editor \u00c2\u00b7 tenant A",
-                "role": "editor",
-                "action": "update",
-                "method": "PUT",
-                "scope": "other",
-                "assetId": "b1",
-                "assetOwner": "B",
-                "expectedStatus": 403,
-                "expectedLabel": "deny"
-            },
-            {
-                "id": "viewer-a-read-a1",
-                "actor": "Viewer \u00c2\u00b7 tenant A",
-                "role": "viewer",
-                "action": "read",
-                "method": "GET",
-                "scope": "own",
-                "assetId": "a1",
-                "assetOwner": "A",
-                "expectedStatus": 200,
-                "expectedLabel": "allow"
-            },
-            {
-                "id": "viewer-a-update-a1",
-                "actor": "Viewer \u00c2\u00b7 tenant A",
-                "role": "viewer",
-                "action": "update",
-                "method": "PUT",
-                "scope": "own",
-                "assetId": "a1",
-                "assetOwner": "A",
-                "expectedStatus": 403,
-                "expectedLabel": "deny"
-            },
-            {
-                "id": "viewer-a-read-b1",
-                "actor": "Viewer \u00c2\u00b7 tenant A",
-                "role": "viewer",
-                "action": "read",
-                "method": "GET",
-                "scope": "other",
-                "assetId": "b1",
-                "assetOwner": "B",
-                "expectedStatus": 403,
-                "expectedLabel": "deny"
-            },
-            {
-                "id": "viewer-a-update-b1",
-                "actor": "Viewer \u00c2\u00b7 tenant A",
-                "role": "viewer",
-                "action": "update",
-                "method": "PUT",
-                "scope": "other",
-                "assetId": "b1",
-                "assetOwner": "B",
-                "expectedStatus": 403,
-                "expectedLabel": "deny"
-            }
-        ],
-        "assumptions": null,
-        "concepts": [
-            {
-                "label": "Editors",
-                "value": "can update",
-                "snippet": "Editors can also update them."
-            },
-            {
-                "label": "Viewers",
-                "value": "cannot update",
-                "snippet": "Viewers can read assets in their own tenant."
-            },
-            {
-                "label": "Cross-tenant access",
-                "value": "always denied",
-                "snippet": "Viewers can read assets in their own tenant."
-            }
-        ],
-        "hash": "1af0de86ba13a018",
-        "assumptionsAcknowledged": false,
-        "approved": true,
-        "approvedAt": "2026-10-26T05:27:57.1831286Z",
-        "createdAt": "2026-10-26T05:27:57.1017502Z"
-    },
-    "runs": null
+  "disclaimer": "A passing result means the approved scenarios passed. It does not prove the whole application is secure.",
+  "exportedAt": "2026-10-26T05:27:57.2584678Z",
+  "plan": {
+    "approved": true,
+    "approvedAt": "2026-10-26T05:27:57.1831286Z",
+    "assumptions": null,
+    "assumptionsAcknowledged": false,
+    "cases": [
+      {
+        "id": "editor-a-read-a1",
+        "actor": "Editor \u00c2\u00b7 tenant A",
+        "role": "editor",
+        "action": "read",
+        "method": "GET",
+        "scope": "own",
+        "assetId": "a1",
+        "assetOwner": "A",
+        "expectedStatus": 200,
+        "expectedLabel": "allow"
+      },
+      {
+        "id": "editor-a-update-a1",
+        "actor": "Editor \u00c2\u00b7 tenant A",
+        "role": "editor",
+        "action": "update",
+        "method": "PUT",
+        "scope": "own",
+        "assetId": "a1",
+        "assetOwner": "A",
+        "expectedStatus": 200,
+        "expectedLabel": "allow"
+      },
+      {
+        "id": "editor-a-read-b1",
+        "actor": "Editor \u00c2\u00b7 tenant A",
+        "role": "editor",
+        "action": "read",
+        "method": "GET",
+        "scope": "other",
+        "assetId": "b1",
+        "assetOwner": "B",
+        "expectedStatus": 403,
+        "expectedLabel": "deny"
+      },
+      {
+        "id": "editor-a-update-b1",
+        "actor": "Editor \u00c2\u00b7 tenant A",
+        "role": "editor",
+        "action": "update",
+        "method": "PUT",
+        "scope": "other",
+        "assetId": "b1",
+        "assetOwner": "B",
+        "expectedStatus": 403,
+        "expectedLabel": "deny"
+      },
+      {
+        "id": "viewer-a-read-a1",
+        "actor": "Viewer \u00c2\u00b7 tenant A",
+        "role": "viewer",
+        "action": "read",
+        "method": "GET",
+        "scope": "own",
+        "assetId": "a1",
+        "assetOwner": "A",
+        "expectedStatus": 200,
+        "expectedLabel": "allow"
+      },
+      {
+        "id": "viewer-a-update-a1",
+        "actor": "Viewer \u00c2\u00b7 tenant A",
+        "role": "viewer",
+        "action": "update",
+        "method": "PUT",
+        "scope": "own",
+        "assetId": "a1",
+        "assetOwner": "A",
+        "expectedStatus": 403,
+        "expectedLabel": "deny"
+      },
+      {
+        "id": "viewer-a-read-b1",
+        "actor": "Viewer \u00c2\u00b7 tenant A",
+        "role": "viewer",
+        "action": "read",
+        "method": "GET",
+        "scope": "other",
+        "assetId": "b1",
+        "assetOwner": "B",
+        "expectedStatus": 403,
+        "expectedLabel": "deny"
+      },
+      {
+        "id": "viewer-a-update-b1",
+        "actor": "Viewer \u00c2\u00b7 tenant A",
+        "role": "viewer",
+        "action": "update",
+        "method": "PUT",
+        "scope": "other",
+        "assetId": "b1",
+        "assetOwner": "B",
+        "expectedStatus": 403,
+        "expectedLabel": "deny"
+      }
+    ],
+    "concepts": [
+      {
+        "label": "Editors",
+        "value": "can update",
+        "snippet": "Editors can also update them."
+      },
+      {
+        "label": "Viewers",
+        "value": "cannot update",
+        "snippet": "Viewers can read assets in their own tenant."
+      },
+      {
+        "label": "Cross-tenant access",
+        "value": "always denied",
+        "snippet": "Viewers can read assets in their own tenant."
+      }
+    ],
+    "createdAt": "2026-10-26T05:27:57.1017502Z",
+    "hash": "c0bb4f03f99a9459aa12d22c9d541fb023e86994ce6673d896d8879239bdeb77",
+    "id": "79ffb19b-2a52-4541-99da-c0c25ba511b9",
+    "kind": "root",
+    "rootPlanId": "79ffb19b-2a52-4541-99da-c0c25ba511b9",
+    "ruleText": "Viewers can read assets in their own tenant. Editors can also update them. Neither role can access another tenant's assets."
+  },
+  "runs": null
 }

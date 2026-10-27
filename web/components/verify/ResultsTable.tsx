@@ -1,10 +1,10 @@
-import clsx from "clsx";
-import { Search } from "lucide-react";
-import type { Plan, Run } from "@/lib/types";
-import { ACTION_LABEL, ROLE_LABEL, SCOPE_LABEL } from "@/constants/labels";
-import { CheckBadge, type RowState } from "../evidence/StatusBadges";
+import clsx from 'clsx';
+import { Search } from 'lucide-react';
+import type { Plan, Run } from '@/lib/types';
+import { ACTION_LABEL, ROLE_LABEL, SCOPE_LABEL } from '@/constants/labels';
+import { CheckBadge, type RowState } from '../evidence/StatusBadges';
 
-const expectedText = (label: string) => (label === "allow" ? "Allow" : "Deny");
+const expectedText = (label: string) => (label === 'allow' ? 'Allow' : 'Deny');
 
 const ResultsTable = ({
   plan,
@@ -31,7 +31,9 @@ const ResultsTable = ({
             <th className="px-4 py-2.5 font-medium">Scope</th>
             <th className="px-4 py-2.5 font-medium">Expected</th>
             <th className="px-4 py-2.5 font-medium">Result</th>
-            <th className="w-28 px-4 py-2.5" />
+            <th className="w-28 px-4 py-2.5">
+              <span className="sr-only">Actions</span>
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -43,9 +45,9 @@ const ResultsTable = ({
                 key={c.id}
                 data-result-row={c.id}
                 className={clsx(
-                  "border-b border-border last:border-0",
-                  state === "fail" && "border-l-2 border-l-fail",
-                  selectedId === c.id && "bg-panel-elevated"
+                  'border-b border-border last:border-0',
+                  state === 'fail' && 'border-l-2 border-l-fail',
+                  selectedId === c.id && 'bg-panel-elevated',
                 )}
               >
                 <td className="px-4 py-2.5 text-ink">{ROLE_LABEL[c.role]}</td>
@@ -56,7 +58,7 @@ const ResultsTable = ({
                   <CheckBadge state={state} />
                 </td>
                 <td className="px-4 py-2.5 text-right">
-                  {result && state === "fail" && (
+                  {result && state === 'fail' && (
                     <button
                       type="button"
                       onClick={() => onSelectResult(c.id)}
@@ -66,8 +68,12 @@ const ResultsTable = ({
                       Inspect
                     </button>
                   )}
-                  {result && state !== "fail" && (
-                    <button type="button" onClick={() => onSelectResult(c.id)} className="text-xs text-ink-faint hover:text-ink">
+                  {result && state !== 'fail' && (
+                    <button
+                      type="button"
+                      onClick={() => onSelectResult(c.id)}
+                      className="text-xs text-ink-faint hover:text-ink"
+                    >
                       Details
                     </button>
                   )}
@@ -84,7 +90,10 @@ const ResultsTable = ({
           return (
             <li
               key={c.id}
-              className={clsx("space-y-1.5 bg-panel px-4 py-3 text-sm", state === "fail" && "border-l-2 border-l-fail")}
+              className={clsx(
+                'space-y-1.5 bg-panel px-4 py-3 text-sm',
+                state === 'fail' && 'border-l-2 border-l-fail',
+              )}
             >
               <div className="flex items-center justify-between">
                 <span className="font-medium text-ink">
@@ -101,7 +110,7 @@ const ResultsTable = ({
                   onClick={() => onSelectResult(c.id)}
                   className="text-xs font-medium text-brand underline-offset-2 hover:underline"
                 >
-                  {state === "fail" ? "Inspect evidence" : "View details"}
+                  {state === 'fail' ? 'Inspect evidence' : 'View details'}
                 </button>
               )}
             </li>
