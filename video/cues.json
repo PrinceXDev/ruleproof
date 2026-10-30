@@ -1,0 +1,131 @@
+{
+  "s1": {
+    "uiIn": 12,
+    "click": 70,
+    "forbidden": 74,
+    "freeze": 92,
+    "terminal": 96,
+    "typeStart": 100,
+    "ok200": 128,
+    "title1": 150,
+    "title2": 212
+  },
+  "s2": {
+    "n1": 6,
+    "n2": 18,
+    "n3": 30,
+    "n4": 42,
+    "lock": 62,
+    "bypassStart": 100,
+    "leak": 150,
+    "text1": 172,
+    "text2": 218
+  },
+  "s3": {
+    "pulse": 12,
+    "logo": 30,
+    "word": 44,
+    "matrix": 70,
+    "hero": 96,
+    "sub": 140
+  },
+  "s4": {
+    "typeStart": 20,
+    "typeEnd": 150,
+    "click": 162,
+    "head": 172,
+    "parse": 185,
+    "matrix": 215,
+    "approve": 300,
+    "bound": 322
+  },
+  "s5": {
+    "rowStart": 20,
+    "step": 15,
+    "fail1": 50,
+    "fail2": 110,
+    "summary": 150,
+    "zoom": 180,
+    "chain": 215
+  },
+  "s6": {
+    "gridStart": 10,
+    "allPass": 70,
+    "silence": 120,
+    "twist": 150,
+    "bypass": 180,
+    "count27": 275,
+    "leak9": 312,
+    "contrast": 345
+  },
+  "s7": {
+    "diff": 15,
+    "impact": 110,
+    "invalid": 200,
+    "ci": 265,
+    "fail": 322,
+    "title": 335
+  },
+  "s8": {
+    "p1": 6,
+    "p2": 46,
+    "p3": 86,
+    "p4": 126,
+    "p5": 166,
+    "p6": 202,
+    "w1": 10,
+    "w2": 50,
+    "w3": 90,
+    "w4": 130
+  },
+  "s9": {
+    "logo": 0,
+    "line1": 55,
+    "line2": 112,
+    "url": 140
+  },
+  "n1": {
+    "panel": 10,
+    "gap": 80,
+    "suggest": 120,
+    "click": 170,
+    "typeEnd": 250,
+    "count": 262,
+    "run": 300,
+    "fail": 350,
+    "csv": 420
+  },
+  "n2": {
+    "toggle": 10,
+    "grid": 36,
+    "bypass": 130,
+    "counters": 250,
+    "share": 320
+  },
+  "n3": {
+    "a": 10,
+    "b": 150,
+    "c": 300,
+    "ttl": 20
+  },
+  "n4": {
+    "shot": 10,
+    "flow": 60,
+    "step": 40,
+    "bul": 40
+  },
+  "n5": {
+    "browser": 10,
+    "server": 60,
+    "mods": 100,
+    "fixtures": 170,
+    "ttl": 250
+  },
+  "n6": {
+    "head": 10,
+    "l1": 80,
+    "l2": 150,
+    "l3": 220,
+    "l4": 290
+  }
+}

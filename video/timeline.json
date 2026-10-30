@@ -1,0 +1,216 @@
+{
+  "fps": 30,
+  "scenes": {
+    "s1": {
+      "from": 0,
+      "dur": 270
+    },
+    "s2": {
+      "from": 270,
+      "dur": 270
+    },
+    "s3": {
+      "from": 540,
+      "dur": 240
+    },
+    "s4": {
+      "from": 780,
+      "dur": 360
+    },
+    "s5": {
+      "from": 1140,
+      "dur": 360
+    },
+    "s6": {
+      "from": 1500,
+      "dur": 390
+    },
+    "s7": {
+      "from": 1890,
+      "dur": 390
+    },
+    "s8": {
+      "from": 2280,
+      "dur": 240
+    },
+    "s9": {
+      "from": 2520,
+      "dur": 180
+    }
+  },
+  "total": 2700,
+  "teaser": {
+    "total": 900,
+    "scenes": {
+      "s1": {
+        "from": 0,
+        "dur": 270
+      },
+      "s6": {
+        "from": 270,
+        "dur": 390
+      },
+      "s9": {
+        "from": 660,
+        "dur": 240
+      }
+    }
+  },
+  "voice": [
+    {
+      "id": "s2",
+      "scene": "s2",
+      "offset": 18,
+      "text": "An interface can hide an action while an API still exposes the data. And authorization bugs can survive ordinary testing."
+    },
+    {
+      "id": "s3",
+      "scene": "s3",
+      "offset": 16,
+      "text": "Meet RuleProof. Define what access should look like, verify what your API actually allows, and inspect the evidence."
+    },
+    {
+      "id": "s4",
+      "scene": "s4",
+      "offset": 15,
+      "text": "Write the rule in plain words. RuleProof turns each sentence into explicit checks, shows its assumptions, and ties your approval to that exact revision."
+    },
+    {
+      "id": "s5",
+      "scene": "s5",
+      "offset": 15,
+      "text": "RuleProof runs the approved checks against the actual API. Here, two cross-tenant requests return protected data. Every mismatch comes with traceable evidence."
+    },
+    {
+      "id": "s6a",
+      "scene": "s6",
+      "offset": 12,
+      "text": "The normal checks pass."
+    },
+    {
+      "id": "s6b",
+      "scene": "s6",
+      "offset": 150,
+      "text": "But RuleProof goes further. It tests bypass variants, and uncovers nine successful leaks in the documented partial-fix scenario."
+    },
+    {
+      "id": "s7",
+      "scene": "s7",
+      "offset": 15,
+      "text": "RuleProof also helps teams understand which checks need review when an API changes. And approved contracts can become CI gates that catch regressions before release."
+    },
+    {
+      "id": "s8",
+      "scene": "s8",
+      "offset": 12,
+      "text": "From a plain-language rule, to approved checks, durable execution, and inspectable evidence."
+    },
+    {
+      "id": "s9",
+      "scene": "s9",
+      "offset": 38,
+      "text": "Security isn't what your UI promises. [pause] It's what your API proves."
+    },
+    {
+      "id": "n1",
+      "scene": "n1",
+      "offset": 15,
+      "text": "Access bugs rarely live on the endpoint everyone is looking at. RuleProof maps the rule onto the OpenAPI spec and flags the export route the rule never mentions. Add the suggested sentence, and eight checks become twelve. Now the seeded defect fails four, including a leaked export."
+    },
+    {
+      "id": "n2",
+      "scene": "n2",
+      "offset": 15,
+      "text": "Switch to the corrected API, with the same approved plan. All twelve checks pass, and all twenty-seven bypass attempts are refused. Share the report, and whoever signs off sees the same read-only evidence, tied to the approved revision."
+    },
+    {
+      "id": "n3",
+      "scene": "n3",
+      "offset": 15,
+      "text": "Plans never change silently. Every edit creates a new revision, and the old approval does not carry over. Before you approve again, the diff shows reworded sentences, flipped expectations, and new assumptions. You can compare any two revisions in run history."
+    },
+    {
+      "id": "n4",
+      "scene": "n4",
+      "offset": 15,
+      "text": "Runs continue after the browser closes. Retrying a request returns the same receipt, evidence is checkpointed before the next request, and an environment can only be reserved once. Interrupted requests are never replayed automatically."
+    },
+    {
+      "id": "n5",
+      "scene": "n5",
+      "offset": 6,
+      "text": "Under the hood it is one Go binary. A bounded rule parser, endpoint coverage, a bypass catalog and an exact-status runner, backed by SQLite or Postgres, with three fixture APIs and a static web interface."
+    },
+    {
+      "id": "n6",
+      "scene": "n6",
+      "offset": 12,
+      "text": "And it is honest about its limits. A passing matrix means the approved scenarios passed, not that everything is secure. The vocabulary is small, and bypass variants are a fixed list, not a fuzzer."
+    }
+  ],
+  "long": {
+    "total": 5400,
+    "scenes": {
+      "s1": {
+        "from": 0,
+        "dur": 270
+      },
+      "s2": {
+        "from": 270,
+        "dur": 270
+      },
+      "s3": {
+        "from": 540,
+        "dur": 240
+      },
+      "s4": {
+        "from": 780,
+        "dur": 360
+      },
+      "s5": {
+        "from": 1140,
+        "dur": 360
+      },
+      "n1": {
+        "from": 1500,
+        "dur": 540
+      },
+      "s6": {
+        "from": 2040,
+        "dur": 390
+      },
+      "n2": {
+        "from": 2430,
+        "dur": 420
+      },
+      "n3": {
+        "from": 2850,
+        "dur": 480
+      },
+      "s7": {
+        "from": 3330,
+        "dur": 390
+      },
+      "n4": {
+        "from": 3720,
+        "dur": 420
+      },
+      "n5": {
+        "from": 4140,
+        "dur": 360
+      },
+      "n6": {
+        "from": 4500,
+        "dur": 390
+      },
+      "s8": {
+        "from": 4890,
+        "dur": 240
+      },
+      "s9": {
+        "from": 5130,
+        "dur": 270
+      }
+    }
+  }
+}

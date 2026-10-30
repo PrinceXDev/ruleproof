@@ -1,0 +1,31 @@
+{
+ "generator": "scripts/gen-score.mjs",
+ "note": "Original procedural synthesis. No third-party samples, no licensing required.",
+ "sampleRate": 44100,
+ "files": [
+  {
+   "file": "audio/music.wav"
+  },
+  {
+   "file": "audio/sfx.wav"
+  },
+  {
+   "file": "audio/teaser-music.wav"
+  },
+  {
+   "file": "audio/teaser-sfx.wav"
+  }
+ ],
+ "silenceGates": [
+  {
+   "why": "ambient cut at the 200 OK",
+   "fromSec": 4.266666666666667,
+   "toSec": 5.5
+  },
+  {
+   "why": "purposeful silence before the bypass twist",
+   "fromSec": 54,
+   "toSec": 55.5
+  }
+ ]
+}

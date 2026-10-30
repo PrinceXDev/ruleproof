@@ -1,0 +1,32 @@
+{
+  "name": "ruleproof-film",
+  "version": "1.0.0",
+  "private": true,
+  "description": "RuleProof hackathon film built with Remotion",
+  "scripts": {
+    "dev": "remotion studio",
+    "typecheck": "tsc --noEmit",
+    "assets": "node scripts/copy-assets.mjs",
+    "audio": "node scripts/gen-score.mjs",
+    "vo": "python scripts/gen-vo.py && node scripts/gen-captions.mjs",
+    "render": "node scripts/render-all.mjs"
+  },
+  "dependencies": {
+    "@remotion/bundler": "4.0.539",
+    "@remotion/cli": "^4.0.539",
+    "@remotion/fonts": "^4.0.539",
+    "@remotion/media-utils": "^4.0.539",
+    "@remotion/renderer": "4.0.539",
+    "@remotion/transitions": "^4.0.539",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "remotion": "^4.0.539"
+  },
+  "devDependencies": {
+    "@fontsource/inter": "^5.3.0",
+    "@fontsource/jetbrains-mono": "^5.3.0",
+    "@fontsource/space-grotesk": "^5.3.0",
+    "@types/react": "^19.3.0",
+    "typescript": "^7.0.2"
+  }
+}

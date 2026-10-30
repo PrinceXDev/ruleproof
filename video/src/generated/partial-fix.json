@@ -1,0 +1,385 @@
+{
+ "catalog": "v1",
+ "checks": [
+  {
+   "id": "editor-a-read-a1",
+   "actor": "Editor · tenant A",
+   "method": "GET",
+   "path": "/assets/a1",
+   "want": 200,
+   "got": 200,
+   "verdict": "pass"
+  },
+  {
+   "id": "editor-a-update-a1",
+   "actor": "Editor · tenant A",
+   "method": "PUT",
+   "path": "/assets/a1",
+   "want": 200,
+   "got": 200,
+   "verdict": "pass"
+  },
+  {
+   "id": "editor-a-export-a1",
+   "actor": "Editor · tenant A",
+   "method": "GET",
+   "path": "/assets/a1/export",
+   "want": 200,
+   "got": 200,
+   "verdict": "pass"
+  },
+  {
+   "id": "editor-a-read-b1",
+   "actor": "Editor · tenant A",
+   "method": "GET",
+   "path": "/assets/b1",
+   "want": 403,
+   "got": 403,
+   "verdict": "pass"
+  },
+  {
+   "id": "editor-a-update-b1",
+   "actor": "Editor · tenant A",
+   "method": "PUT",
+   "path": "/assets/b1",
+   "want": 403,
+   "got": 403,
+   "verdict": "pass"
+  },
+  {
+   "id": "editor-a-export-b1",
+   "actor": "Editor · tenant A",
+   "method": "GET",
+   "path": "/assets/b1/export",
+   "want": 403,
+   "got": 403,
+   "verdict": "pass"
+  },
+  {
+   "id": "viewer-a-read-a1",
+   "actor": "Viewer · tenant A",
+   "method": "GET",
+   "path": "/assets/a1",
+   "want": 200,
+   "got": 200,
+   "verdict": "pass"
+  },
+  {
+   "id": "viewer-a-update-a1",
+   "actor": "Viewer · tenant A",
+   "method": "PUT",
+   "path": "/assets/a1",
+   "want": 403,
+   "got": 403,
+   "verdict": "pass"
+  },
+  {
+   "id": "viewer-a-export-a1",
+   "actor": "Viewer · tenant A",
+   "method": "GET",
+   "path": "/assets/a1/export",
+   "want": 200,
+   "got": 200,
+   "verdict": "pass"
+  },
+  {
+   "id": "viewer-a-read-b1",
+   "actor": "Viewer · tenant A",
+   "method": "GET",
+   "path": "/assets/b1",
+   "want": 403,
+   "got": 403,
+   "verdict": "pass"
+  },
+  {
+   "id": "viewer-a-update-b1",
+   "actor": "Viewer · tenant A",
+   "method": "PUT",
+   "path": "/assets/b1",
+   "want": 403,
+   "got": 403,
+   "verdict": "pass"
+  },
+  {
+   "id": "viewer-a-export-b1",
+   "actor": "Viewer · tenant A",
+   "method": "GET",
+   "path": "/assets/b1/export",
+   "want": 403,
+   "got": 403,
+   "verdict": "pass"
+  }
+ ],
+ "variants": [
+  {
+   "id": "editor-a-read-b1~head-method",
+   "of": "editor-a-read-b1",
+   "kind": "head-method",
+   "label": "HEAD instead of GET",
+   "method": "HEAD",
+   "path": "/assets/b1",
+   "got": 200,
+   "leaked": true
+  },
+  {
+   "id": "editor-a-read-b1~trailing-slash",
+   "of": "editor-a-read-b1",
+   "kind": "trailing-slash",
+   "label": "Trailing slash",
+   "method": "GET",
+   "path": "/assets/b1/",
+   "got": 404,
+   "leaked": false
+  },
+  {
+   "id": "editor-a-read-b1~id-case",
+   "of": "editor-a-read-b1",
+   "kind": "id-case",
+   "label": "Upper-case object ID",
+   "method": "GET",
+   "path": "/assets/B1",
+   "got": 404,
+   "leaked": false
+  },
+  {
+   "id": "editor-a-read-b1~tenant-header",
+   "of": "editor-a-read-b1",
+   "kind": "tenant-header",
+   "label": "Spoofed X-Tenant-ID header",
+   "method": "GET",
+   "path": "/assets/b1",
+   "got": 200,
+   "leaked": true
+  },
+  {
+   "id": "editor-a-update-b1~trailing-slash",
+   "of": "editor-a-update-b1",
+   "kind": "trailing-slash",
+   "label": "Trailing slash",
+   "method": "PUT",
+   "path": "/assets/b1/",
+   "got": 404,
+   "leaked": false
+  },
+  {
+   "id": "editor-a-update-b1~id-case",
+   "of": "editor-a-update-b1",
+   "kind": "id-case",
+   "label": "Upper-case object ID",
+   "method": "PUT",
+   "path": "/assets/B1",
+   "got": 404,
+   "leaked": false
+  },
+  {
+   "id": "editor-a-update-b1~tenant-header",
+   "of": "editor-a-update-b1",
+   "kind": "tenant-header",
+   "label": "Spoofed X-Tenant-ID header",
+   "method": "PUT",
+   "path": "/assets/b1",
+   "got": 200,
+   "leaked": true
+  },
+  {
+   "id": "editor-a-update-b1~method-override",
+   "of": "editor-a-update-b1",
+   "kind": "method-override",
+   "label": "POST with X-HTTP-Method-Override: PUT",
+   "method": "POST",
+   "path": "/assets/b1",
+   "got": 405,
+   "leaked": false
+  },
+  {
+   "id": "editor-a-export-b1~head-method",
+   "of": "editor-a-export-b1",
+   "kind": "head-method",
+   "label": "HEAD instead of GET",
+   "method": "HEAD",
+   "path": "/assets/b1/export",
+   "got": 200,
+   "leaked": true
+  },
+  {
+   "id": "editor-a-export-b1~trailing-slash",
+   "of": "editor-a-export-b1",
+   "kind": "trailing-slash",
+   "label": "Trailing slash",
+   "method": "GET",
+   "path": "/assets/b1/export/",
+   "got": 404,
+   "leaked": false
+  },
+  {
+   "id": "editor-a-export-b1~id-case",
+   "of": "editor-a-export-b1",
+   "kind": "id-case",
+   "label": "Upper-case object ID",
+   "method": "GET",
+   "path": "/assets/B1/export",
+   "got": 404,
+   "leaked": false
+  },
+  {
+   "id": "editor-a-export-b1~tenant-header",
+   "of": "editor-a-export-b1",
+   "kind": "tenant-header",
+   "label": "Spoofed X-Tenant-ID header",
+   "method": "GET",
+   "path": "/assets/b1/export",
+   "got": 200,
+   "leaked": true
+  },
+  {
+   "id": "viewer-a-update-a1~trailing-slash",
+   "of": "viewer-a-update-a1",
+   "kind": "trailing-slash",
+   "label": "Trailing slash",
+   "method": "PUT",
+   "path": "/assets/a1/",
+   "got": 404,
+   "leaked": false
+  },
+  {
+   "id": "viewer-a-update-a1~id-case",
+   "of": "viewer-a-update-a1",
+   "kind": "id-case",
+   "label": "Upper-case object ID",
+   "method": "PUT",
+   "path": "/assets/A1",
+   "got": 404,
+   "leaked": false
+  },
+  {
+   "id": "viewer-a-update-a1~method-override",
+   "of": "viewer-a-update-a1",
+   "kind": "method-override",
+   "label": "POST with X-HTTP-Method-Override: PUT",
+   "method": "POST",
+   "path": "/assets/a1",
+   "got": 405,
+   "leaked": false
+  },
+  {
+   "id": "viewer-a-read-b1~head-method",
+   "of": "viewer-a-read-b1",
+   "kind": "head-method",
+   "label": "HEAD instead of GET",
+   "method": "HEAD",
+   "path": "/assets/b1",
+   "got": 200,
+   "leaked": true
+  },
+  {
+   "id": "viewer-a-read-b1~trailing-slash",
+   "of": "viewer-a-read-b1",
+   "kind": "trailing-slash",
+   "label": "Trailing slash",
+   "method": "GET",
+   "path": "/assets/b1/",
+   "got": 404,
+   "leaked": false
+  },
+  {
+   "id": "viewer-a-read-b1~id-case",
+   "of": "viewer-a-read-b1",
+   "kind": "id-case",
+   "label": "Upper-case object ID",
+   "method": "GET",
+   "path": "/assets/B1",
+   "got": 404,
+   "leaked": false
+  },
+  {
+   "id": "viewer-a-read-b1~tenant-header",
+   "of": "viewer-a-read-b1",
+   "kind": "tenant-header",
+   "label": "Spoofed X-Tenant-ID header",
+   "method": "GET",
+   "path": "/assets/b1",
+   "got": 200,
+   "leaked": true
+  },
+  {
+   "id": "viewer-a-update-b1~trailing-slash",
+   "of": "viewer-a-update-b1",
+   "kind": "trailing-slash",
+   "label": "Trailing slash",
+   "method": "PUT",
+   "path": "/assets/b1/",
+   "got": 404,
+   "leaked": false
+  },
+  {
+   "id": "viewer-a-update-b1~id-case",
+   "of": "viewer-a-update-b1",
+   "kind": "id-case",
+   "label": "Upper-case object ID",
+   "method": "PUT",
+   "path": "/assets/B1",
+   "got": 404,
+   "leaked": false
+  },
+  {
+   "id": "viewer-a-update-b1~tenant-header",
+   "of": "viewer-a-update-b1",
+   "kind": "tenant-header",
+   "label": "Spoofed X-Tenant-ID header",
+   "method": "PUT",
+   "path": "/assets/b1",
+   "got": 403,
+   "leaked": false
+  },
+  {
+   "id": "viewer-a-update-b1~method-override",
+   "of": "viewer-a-update-b1",
+   "kind": "method-override",
+   "label": "POST with X-HTTP-Method-Override: PUT",
+   "method": "POST",
+   "path": "/assets/b1",
+   "got": 405,
+   "leaked": false
+  },
+  {
+   "id": "viewer-a-export-b1~head-method",
+   "of": "viewer-a-export-b1",
+   "kind": "head-method",
+   "label": "HEAD instead of GET",
+   "method": "HEAD",
+   "path": "/assets/b1/export",
+   "got": 200,
+   "leaked": true
+  },
+  {
+   "id": "viewer-a-export-b1~trailing-slash",
+   "of": "viewer-a-export-b1",
+   "kind": "trailing-slash",
+   "label": "Trailing slash",
+   "method": "GET",
+   "path": "/assets/b1/export/",
+   "got": 404,
+   "leaked": false
+  },
+  {
+   "id": "viewer-a-export-b1~id-case",
+   "of": "viewer-a-export-b1",
+   "kind": "id-case",
+   "label": "Upper-case object ID",
+   "method": "GET",
+   "path": "/assets/B1/export",
+   "got": 404,
+   "leaked": false
+  },
+  {
+   "id": "viewer-a-export-b1~tenant-header",
+   "of": "viewer-a-export-b1",
+   "kind": "tenant-header",
+   "label": "Spoofed X-Tenant-ID header",
+   "method": "GET",
+   "path": "/assets/b1/export",
+   "got": 200,
+   "leaked": true
+  }
+ ]
+}
